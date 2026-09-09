@@ -107,6 +107,27 @@ Targets at or above the original size skip compression. The original is also
 kept if re-encoding offers no size reduction. Canvas work is capped at 40 MP
 and 16,384 pixels per side to avoid unreliable large allocations.
 
+## BS ↔ AD Date Converter
+
+`app/tools/date-converter/page.tsx` wraps the client UI in `date-converter.tsx`.
+`date-wheel.tsx` contains the scroll/tap/keyboard picker. `convert.ts` keeps date
+math and formatting independent of React. There is one wheel interface, with
+BS-to-AD and AD-to-BS direction buttons, Nepal-local Today, and Copy result.
+Changing direction preserves the selected day. Month changes clamp invalid days.
+
+The data is bundled from
+[`@sonill/nepali-dates@1.0.7`](https://cdn.jsdelivr.net/npm/@sonill/nepali-dates@1.0.7/data/calendar-data.json),
+the same source used in the supplied reference. Its MIT license is retained as
+`calendar-data.LICENSE` beside `calendar-data.json`. No new runtime dependency,
+remote script, calendar API request, or user date upload is needed.
+
+Conversions use BS 2000-01-01 = AD 1943-04-14 as the anchor and UTC day arithmetic.
+The supported range covers all bundled BS years 2000–2100; exact Gregorian bounds
+are derived from the table and displayed in the tool. We do not extrapolate
+missing years. Accuracy follows the community dataset, including future years.
+To update data, replace it with a reviewed version from the same source, retain
+the license, and rerun the reference-pair and full-range round-trip tests.
+
 ## Storage and future accounts
 
 The most recent five complete speed tests are stored on this device. Tools
