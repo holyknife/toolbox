@@ -81,3 +81,11 @@ test('choosing and saving a refined spelling preserves its replacement range', (
   assert.ok(suggestionsFor(restored.words[0].roman).includes('म्या'));
   assert.equal(restored.text.slice(restored.words[1].start,restored.words[1].end),'नमस्ते');
 });
+
+
+test('paste converts the last word even when the diff reuses a trailing space', () => {
+  const original = { ...emptyDraft, text:'old ', words:[] };
+  const edit = applyTextEdit(original,'namaste\nma ');
+  const result = commitWords(edit.draft,edit.start,edit.end,transliterateWord);
+  assert.equal(result.draft.text,'नमस्ते\nम ');
+});

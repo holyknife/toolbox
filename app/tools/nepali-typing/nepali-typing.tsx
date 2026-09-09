@@ -3,11 +3,12 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Copy, Download, Languages, RotateCcw } from 'lucide-react';
+import WordSuggestions from './word-suggestions';
 import { storage } from '@/lib/storage';
 import { applyTextEdit, commitWords, countText, emptyDraft, readDraft, replaceRange, type TypingDraft } from './editor-state';
 
 type Engine = typeof import('./transliterate');
-interface Suggestions { start: number; end: number; roman: string; options: string[] }
+interface Suggestions { start: number; end: number; roman: string; options: string[]; review?: boolean }
 
 // Keep text, original Roman words, and selections local; no text goes to a server.
 export default function NepaliTyping() {
@@ -19,6 +20,8 @@ export default function NepaliTyping() {
   const [actionError, setActionError] = useState('');
   const [message, setMessage] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestions | null>(null);
+  const [selectedOption, setSelectedOption] = useState(0);
+  const [navigatedOptions, setNavigatedOptions] = useState(false);
   const editor = useRef<HTMLTextAreaElement>(null);
   const engine = useRef<Engine | null>(null);
   const composing = useRef(false);
@@ -26,6 +29,13 @@ export default function NepaliTyping() {
   const mounted = useRef(true);
   const saveNumber = useRef(0);
   const counts = countText(draft.text);
+  const choices = suggestions?.options.length ? [...suggestions.options, suggestions.roman] : [];
+
+  // A new word starts at its current spelling; previous arrow movement never leaks.
+  useEffect(() => {
+    setSelectedOption(0);
+    setNavigatedOptions(false);
+  }, [suggestions?.start,suggestions?.roman,suggestions?.review]);
 
   // Lazy loading keeps package failures recoverable; English editing remains available.
   async function loadEngine() {
@@ -117,7 +127,7 @@ export default function NepaliTyping() {
       || draft.words.find(item => caret === item.end + 1 && /\s/.test(draft.text[item.end]));
     if (!word) return false;
     try {
-      setSuggestions({ ...word, options:[...new Set([draft.text.slice(word.start,word.end), ...engine.current.suggestionsFor(word.roman)])] });
+      setSuggestions({ ...word, review:true, options:[...new Set([draft.text.slice(word.start,word.end), ...engine.current.suggestionsFor(word.roman)])] });
       return true;
     } catch { setActionError('Suggestions could not be loaded for this word. You can edit it directly.'); return false; }
   }
@@ -125,7 +135,11 @@ export default function NepaliTyping() {
   // Replacing just the chosen range preserves surrounding English and later word positions.
   function chooseWord(value: string) {
     if (!suggestions) return;
-    updateDraft(replaceRange(draft,suggestions.start,suggestions.end,value,suggestions.roman),suggestions.start + value.length);
+    // Preserve the following space when Backspace opened the chooser after it.
+    const oldCaret = editor.current?.selectionEnd ?? suggestions.end;
+    const afterWord = draft.text.slice(suggestions.end,oldCaret);
+    const caret = oldCaret >= suggestions.end && /^\s*$/.test(afterWord) ? oldCaret : suggestions.end;
+    updateDraft(replaceRange(draft,suggestions.start,suggestions.end,value,suggestions.roman),caret + value.length - (suggestions.end - suggestions.start));
     setSuggestions(null);
   }
 
@@ -149,9 +163,17 @@ export default function NepaliTyping() {
     if (event.nativeEvent.isComposing) return;
     if (event.ctrlKey && event.key.toLowerCase() === 'g') { event.preventDefault(); toggleMode(); return; }
     if (event.key === 'Escape') { setSuggestions(null); return; }
-    if (event.key === 'ArrowDown' && suggestions) {
+    if (suggestions && choices.length && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
       event.preventDefault();
-      document.getElementById('nepali-suggestion-0')?.focus();
+      const direction = event.key === 'ArrowDown' ? 1 : -1;
+      setSelectedOption(previous => (previous + direction + choices.length) % choices.length);
+      setNavigatedOptions(true);
+      return;
+    }
+    if (suggestions && choices.length && event.key === 'Enter' && (suggestions.review || navigatedOptions)) {
+      event.preventDefault();
+      chooseWord(choices[selectedOption] || choices[0]);
+      return;
     }
     if (event.key === 'Backspace' && !suggestions && event.currentTarget.selectionStart === event.currentTarget.selectionEnd && openConvertedWord(event.currentTarget.selectionStart)) {
       event.preventDefault();
@@ -198,31 +220,22 @@ export default function NepaliTyping() {
         <button disabled={!ready} onClick={toggleMode} aria-pressed={draft.nepali} className="rounded-panel border border-border px-4 py-2 text-sm text-accent">{draft.nepali ? 'Nepali mode' : 'English mode'} <span className="ml-2 text-xs text-dim">Ctrl+G</span></button>
       </div>
       <label htmlFor="nepali-editor" className="mb-2 block text-sm font-medium text-text">Your text</label>
+      <div className="relative" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setSuggestions(null); }}>
       <textarea id="nepali-editor" ref={editor} value={draft.text} disabled={!ready} onChange={changeText} onKeyDown={handleKey}
         onCompositionStart={() => { composing.current = true; setSuggestions(null); }}
         onCompositionEnd={() => { composing.current = false; }}
         onSelect={event => { if (event.currentTarget.selectionStart === event.currentTarget.selectionEnd) previewWord(event.currentTarget.value,event.currentTarget.selectionStart); }}
         onClick={event => { if (event.currentTarget.selectionStart === event.currentTarget.selectionEnd) openConvertedWord(event.currentTarget.selectionStart); }}
+        aria-haspopup="listbox" aria-expanded={!!suggestions} aria-activedescendant={suggestions && choices.length ? `nepali-suggestion-${selectedOption}` : undefined}
         aria-describedby="typing-help" aria-controls={suggestions ? 'nepali-suggestions' : undefined}
         spellCheck={false} autoCapitalize="off" autoCorrect="off" placeholder="namaste • tapai lai kasto chha"
         className="min-h-80 w-full resize-y rounded-panel border border-border bg-bg p-4 text-xl leading-loose text-text outline-none focus:border-accent sm:min-h-96"/>
-      {suggestions && <div id="nepali-suggestions" className="mt-2 rounded-panel border border-border bg-bg p-3" aria-label="Word suggestions">
-        <div className="mb-2 flex items-center justify-between gap-3"><p className="text-xs text-dim">Suggestions for <span className="text-text">{suggestions.roman}</span></p><button onClick={() => setSuggestions(null)} className="text-xs text-dim">Dismiss</button></div>
-        <label htmlFor="suggestion-spelling" className="mb-3 block text-xs text-dim">Try another spelling
-          <input id="suggestion-spelling" value={suggestions.roman} onChange={event => refineSpelling(event.target.value)}
-            onKeyDown={event => { if (event.key === 'Escape') { setSuggestions(null); editor.current?.focus(); } }}
-            autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder="e.g. ma, maa, mma, mya"
-            className="mt-1 block w-full rounded-panel border border-border bg-panel px-3 py-2 text-sm text-text outline-none focus:border-accent"/>
-        </label>
-        {!suggestions.options.length && <p className="mb-2 text-sm text-dim">Enter one word using English letters to see spellings.</p>}
-        <div className="flex flex-wrap gap-2">{suggestions.options.map((value,index) => <button id={`nepali-suggestion-${index}`} key={value} onMouseDown={event => event.preventDefault()} onClick={() => chooseWord(value)}
-          onKeyDown={event => { if (event.key === 'Escape') { setSuggestions(null); editor.current?.focus(); } }}
-          className="rounded-panel border border-border bg-panel px-4 py-2 text-lg text-text focus:outline-accent">{value}</button>)}
-          <button disabled={!suggestions.options.length} onMouseDown={event => event.preventDefault()} onClick={() => chooseWord(suggestions.roman)} className="rounded-panel border border-border px-3 py-2 text-sm text-dim">Keep {suggestions.roman}</button>
-        </div>
-      </div>}
+      {suggestions && <WordSuggestions editor={editor} offset={suggestions.start} text={draft.text}
+        roman={suggestions.roman} options={choices} selected={selectedOption}
+        onChoose={chooseWord} onRefine={refineSpelling} onDismiss={() => setSuggestions(null)}/>}
+      </div>
       <div className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-dim"><span>{counts.characters.toLocaleString()} characters · {counts.words.toLocaleString()} words</span><span>{engineReady ? 'Offline transliteration · no text uploads' : 'Loading Nepali typing…'}</span></div>
-      <p id="typing-help" className="mt-4 text-sm leading-relaxed text-dim">Space, Enter, or punctuation converts a word. Click a converted word or press Backspace after it to see alternatives. Press Backspace again to delete, or ↓ to enter suggestions. English mode keeps your letters as typed.</p>
+      <p id="typing-help" className="mt-4 text-sm leading-relaxed text-dim">Space, Enter, or punctuation converts a word. Click a converted word or press Backspace after it to see alternatives. Use ↑ / ↓ to choose, Enter to apply, and Esc to dismiss without leaving the editor. Press Backspace again to delete. English mode keeps your letters as typed.</p>
       <p className="mt-2 text-xs leading-relaxed text-dim">Suggestions include alternate spellings and sound combinations. Use “Try another spelling” for more choices; these are not dictionary predictions. For precise spellings, try aa / ii / uu for long vowels, T / D / N for ट / ड / ण, and sh for श. Character counts include vowel marks and spaces.</p>
       <div className="mt-6 flex flex-wrap gap-3">
         <button disabled={!draft.text} onClick={copyText} className="primary-button"><Copy size={16}/>Copy text</button>

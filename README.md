@@ -232,7 +232,7 @@ This deliverable is a local development app; it has not been deployed.
 
 Files live in `app/tools/nepali-typing/`: `page.tsx` contains server metadata,
 `nepali-typing.tsx` handles the textarea and browser actions, `transliterate.ts`
-contains offline conversion/suggestions, and `editor-state.ts` holds pure editing
+contains offline conversion/suggestions, and `word-suggestions.tsx` positions the inline chooser, and `editor-state.ts` holds pure editing
 and draft-validation functions.
 
 **No external transliteration service is used.** Sanscript is bundled with the
@@ -244,8 +244,12 @@ The dynamic package load has a visible retry action on failure.
 
 Type Roman words and press Space, Enter, or punctuation to convert. Suggestions
 appear while typing. Click a converted word or press Backspace immediately after
-one to revisit its alternatives; another Backspace deletes normally. Arrow Down
-moves into suggestions, Tab moves between them, Enter chooses, and Escape closes.
+one to revisit its alternatives; another Backspace deletes normally. Suggestions float beside the edited word inside the textarea. Up/Down cycle
+choices with the active row centered (two above and two below), Enter applies,
+and Escape closes. Focus stays in the editor. Space after the selected word is
+preserved so typing can continue immediately. The popup follows wrapping,
+textarea scrolling, and resizing, and flips above the word when needed.
+The optional spelling input remains available inside the popup.
 Ctrl+G or the mode button toggles future typing between English and Nepali.
 Existing text is preserved. Native IME composition is left alone.
 

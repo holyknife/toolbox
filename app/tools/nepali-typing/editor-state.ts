@@ -46,7 +46,10 @@ export function applyTextEdit(draft: TypingDraft, text: string): { draft: Typing
 export function commitWords(draft: TypingDraft, start: number, end: number, convert: (word: string) => string): { draft: TypingDraft; caret: number } {
   let first = start;
   while (first > 0 && /[a-z]/i.test(draft.text[first - 1])) first--;
-  const matches = [...draft.text.slice(first,end).matchAll(/[a-z]+(?=[\s.,!?;:])/gi)];
+  // A paste can reuse an unchanged trailing space from the previous text.
+  // Include that delimiter when finding completed words, without moving the caret.
+  const scanEnd = /[\s.,!?;:]/.test(draft.text[end] || '') ? end + 1 : end;
+  const matches = [...draft.text.slice(first,scanEnd).matchAll(/[a-z]+(?=[\s.,!?;:])/gi)];
   let next = draft;
   let caret = end;
   // Work right to left so earlier offsets remain valid as converted lengths change.
