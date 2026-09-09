@@ -180,7 +180,9 @@ replacement and unmount. Anyone holding a WiFi QR can read its credentials.
 Xiaomi spec**. It supports the documented five-line MIUI v2 wrapper, unencrypted
 Android backup versions 1–5 (uncompressed or zlib-compressed TAR), regular WiFi
 TAR members, and plain exported WiFi configuration text. Recognized payloads
-are `wpa_supplicant` network blocks, `WifiBackupData` XML, and
+include MIUI settings `miui_bak/_tmp_bak` network blocks with Android-named
+fields (`SSID`, `PreSharedKey`, `AllowedKeyMgmt`), `wpa_supplicant`
+network blocks, `WifiBackupData` XML, and
 `WifiConfigStoreData` XML. WPA/WPA2 Personal, WEP, and explicitly open networks
 are accepted when required credentials validate. Raw hashed PSKs, encrypted or
 masked passwords, enterprise/WPA3-only security, unknown binary formats, and
@@ -192,8 +194,9 @@ and credentials are checked. Invalid individual records produce a warning;
 unreadable backups show a manual-WiFi fallback. The review list displays SSIDs
 and security types, with selection checkboxes, **before** generating any QR.
 
-Compatibility tests use synthetic fixtures of these known structures, not a
-user's real backup or every MIUI/HyperOS release. Some versions use other binary
+Automated compatibility tests use synthetic fixtures of these known structures.
+The MIUI settings layout was also verified locally against a user-provided backup;
+no real credentials are stored in the repository. This does not cover every MIUI/HyperOS release. Some versions use other binary
 settings payloads and will show an unsupported-format error.
 
 Research sources:

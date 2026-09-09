@@ -17,10 +17,10 @@ function combine(...arrays: Uint8Array[]): ArrayBuffer {
 }
 
 // Build a standards-shaped TAR fixture to test checksum, truncation, and archive handling.
-function tar(payload: string): Uint8Array {
+function tar(payload: string, path = 'apps/com.android.settings/f/wpa_supplicant.conf'): Uint8Array {
   const content = encode(payload);
   const archive = new Uint8Array(512 + Math.ceil(content.length / 512) * 512 + 1024);
-  archive.set(encode('apps/com.android.settings/f/wpa_supplicant.conf'),0);
+  archive.set(encode(path),0);
   archive.set(encode(content.length.toString(8).padStart(11,'0') + '\0'),124);
   archive.fill(32,148,156);
   archive[156] = 48;
@@ -87,4 +87,24 @@ test('encrypted, malformed, wrong-type, and truncated backups fail with manual f
   broken[0] ^= 1;
   await assert.rejects(parseMiuiBackup(combine(encode('ANDROID BACKUP\n5\n0\nnone\n'),broken)),/checksum/);
   await assert.rejects(parseMiuiBackup(combine(encode('ANDROID BACKUP\n5\n0\nnone\n'),tar(config).subarray(0,600))),/invalid|unexpectedly/);
+});
+
+
+// Reproduce the vendor structure using invented credentials, never the user's backup.
+test('MIUI settings archive imports Android-named fields and skips SAE/OWE safely', async () => {
+  const record = (name: string, security: string, password = '"password123"') =>
+    `network={\nConfigKey="${name}"WPA_PSK\nSSID="${name}"\nPreSharedKey=${password}\nWEPTxKeyIndex=0\nHiddenSSID=false\nAllowedKeyMgmt=${security}\n}\n`;
+  const payload = record('Example','02') + record('Example','0001') + record('Open','01','null') + record('Enhanced open','0002','null');
+  for (const compressed of [false,true]) {
+    const archive = tar(payload,'apps/com.android.settings/miui_bak/_tmp_bak');
+    const result = await parseMiuiBackup(combine(encode(miui + `ANDROID BACKUP\n5\n${compressed ? '1' : '0'}\nnone\n`),compressed ? deflateSync(archive) : archive));
+    assert.deepEqual(result.networks.map(network => [network.ssid,network.encryption,network.password]),[['Example','WPA','password123'],['Open','nopass','']]);
+    assert.ok(result.warnings.length);
+  }
+});
+
+test('MIUI incomplete passwords and mixed field formats are rejected', async () => {
+  for (const extra of ['PreSharedKey=null', 'PreSharedKey="password123"\nkey_mgmt=NONE']) {
+    await assert.rejects(parseMiuiBackup(combine(encode(`network={\nSSID="Example"\nAllowedKeyMgmt=02\nHiddenSSID=false\n${extra}\n}`))),/manually/);
+  }
 });

@@ -81,7 +81,8 @@ function tarWifiFiles(bytes: Uint8Array): Uint8Array[] {
     if (checksum !== parseInt(checksumText,8) || size > MAX_EXPANDED_BYTES || offset + 512 + size > bytes.length) throw failure('The archive checksum or file length is invalid.');
     const path = field(345,155) + '/' + field(0,100);
     const type = header[156];
-    if ((type === 0 || type === 48) && /(?:wifi|wpa_supplicant|bcm_supp)/i.test(path)) files.push(bytes.subarray(offset + 512,offset + 512 + size));
+    const isMiuiSettings = path === '/apps/com.android.settings/miui_bak/_tmp_bak';
+    if ((type === 0 || type === 48) && (isMiuiSettings || /(?:wifi|wpa_supplicant|bcm_supp)/i.test(path))) files.push(bytes.subarray(offset + 512,offset + 512 + size));
     offset += 512 + Math.ceil(size / 512) * 512;
   }
   throw failure('The backup archive ended unexpectedly.');
@@ -123,6 +124,27 @@ function addNetwork(network: WifiInput, networks: WifiInput[]): void {
   networks.push(network);
 }
 
+// Observed MIUI settings TAR payload: network blocks with SSID/PreSharedKey fields.
+// Android KeyMgmt bits: NONE=0, WPA_PSK=1, FT_PSK=6, SAE=8, OWE=9.
+// https://developer.android.com/reference/android/net/wifi/WifiConfiguration.KeyMgmt
+// This vendor layout is community reverse-engineering, not an official Xiaomi spec.
+function normalizeMiuiFields(fields: Record<string,string>): void {
+  if (fields.key_mgmt !== undefined || fields.ssid !== undefined || fields.psk !== undefined) throw new Error('Mixed record formats');
+  const encoded = fields.AllowedKeyMgmt;
+  if (!/^(?:[a-f\d]{2})+$/i.test(encoded)) throw new Error('Invalid security bitset');
+  const bytes = encoded.match(/../g)!.map(pair => parseInt(pair,16));
+  if (bytes.slice(1).some(byte => byte !== 0)) throw new Error('Unsupported SAE/OWE or enterprise security');
+  const bits = bytes[0];
+  if (bits === 1) fields.key_mgmt = 'NONE';
+  else if ((bits & 0x42) !== 0 && (bits & ~0x42) === 0) fields.key_mgmt = 'WPA-PSK';
+  else throw new Error('Unsupported security');
+  fields.ssid = fields.SSID || '';
+  if (fields.PreSharedKey && fields.PreSharedKey !== 'null') fields.psk = fields.PreSharedKey;
+  fields.wep_tx_keyidx = fields.WEPTxKeyIndex || '0';
+  if (fields.HiddenSSID !== 'true' && fields.HiddenSSID !== 'false') throw new Error('Invalid hidden-network flag');
+  fields.scan_ssid = fields.HiddenSSID === 'true' ? '1' : '0';
+}
+
 // Parse complete network={...} records with quoted braces allowed inside credentials.
 function parseSupplicant(source: string, networks: WifiInput[], warnings: string[]): boolean {
   const blocks = [...source.matchAll(/^\s*network\s*=\s*\{((?:[^"{}]|"(?:\\.|[^"\\])*")*)\}/gm)];
@@ -138,6 +160,9 @@ function parseSupplicant(source: string, networks: WifiInput[], warnings: string
         if (!pair || fields[pair[1]] !== undefined) throw new Error('Malformed field');
         fields[pair[1]] = pair[2].trim();
       }
+      // MIUI's settings export uses Android field names and little-endian bitset bytes.
+      // Normalize only recognized records; SAE/OWE must never become open networks.
+      if (fields.AllowedKeyMgmt !== undefined) normalizeMiuiFields(fields);
       const security = fields.key_mgmt;
       let encryption: WifiInput['encryption'];
       let password = '';
@@ -255,7 +280,10 @@ async function parseBackupData(buffer: ArrayBuffer): Promise<BackupResult> {
       if (/^\s*\w+\s*=/.test(firstLine)) parseSupplicant(source,networks,warnings);
     }
   }
-  if (!networks.length) throw failure('No readable supported WiFi networks were found. The file may be corrupt, encrypted, or from an unsupported MIUI version.');
+  if (!networks.length) {
+    if (warnings.length) throw failure('This backup was opened, but its WiFi records use a layout or credential format this importer does not yet support. This does not mean your file is corrupt.');
+    throw failure('This importer could not recognize WiFi records in this backup. A valid .bak file can use a different MIUI layout; the file extension alone does not identify that layout.');
+  }
   const unique = networks.filter((network,index) => networks.findIndex(other => other.ssid === network.ssid && other.password === network.password && other.encryption === network.encryption && other.hidden === network.hidden) === index);
   return { networks:unique.map((network,index): ImportedNetwork => ({ ...network, id:`network-${index + 1}` })), warnings:[...new Set(warnings)].map(warning => `${warning} Review the imported list before continuing.`), format };
 }
