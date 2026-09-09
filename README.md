@@ -305,3 +305,61 @@ supports Nepali, and [AI4Bharat IndicXlit](https://github.com/AI4Bharat/IndicXli
 offers Nepali models and hosted interfaces, but neither source establishes such
 a guarantee for this app. The expanded suggestions therefore remain entirely
 local, with no API quota or transmitted text.
+
+### Calculators and search
+
+`/tools/calculators` starts with the basic calculator. Fourteen calculators are
+ranked by approximate interaction/formula complexity: basic arithmetic, discount,
+tip/splitter, GST/VAT, profit margin, simple interest, BMI, aspect ratio, date
+difference, age, compound interest, loan/EMI, GPA, and grades.
+
+Each calculator has a shareable route at `/tools/calculators/[calculator]`.
+The shared Toolbox sidebar stays active on these nested routes. Search is
+available on the home grid, the calculator hub, and each calculator page.
+The home search includes calculator keywords such as EMI, BMI, and GPA.
+
+The local registry `calculators-registry.ts` supplies ordering, descriptions,
+fields, defaults, and calculation entry points. `calculate.ts` and `dates.ts`
+contain pure formulas, separate from form rendering. Basic arithmetic and the
+dynamic GPA/grade forms have dedicated client components. Add another calculator
+by extending the registry (and adding a custom client form if needed); static
+routes are generated from that registry. No backend or calculation API is used.
+
+Conventions and limits:
+- Basic arithmetic uses a parser, not eval, with operator precedence, parentheses,
+  unary signs, and postfix percentages. 10% means 0.1. The display keeps up to
+  12 significant digits; expressions accept up to 2,000 characters.
+- Financial amounts are currency-neutral estimates displayed to two decimals.
+  GST/VAT has three fields: rate, before-tax price, and after-tax price. Enter
+  any two to fill the third; all three entered values are checked for consistency.
+  The tax rate defaults to an editable 13%, not a claim about the applicable rate.
+  Editing an input clears the previously calculated amount; clearing an input
+  keeps the other two values so you can solve in another direction. New bill clears
+  the prices and restores the editable 13% rate. A zero before-tax price cannot determine a missing rate.
+- EMI is fixed-rate, monthly, fully amortizing principal and interest; zero interest
+  divides principal by months. Fees, insurance, taxes, and lender rounding are excluded.
+- Compound interest is a lump sum with selected periodic compounding, no deposits.
+  Fractional years use the compound-growth exponent; no taxes or inflation adjustment.
+- Tip splitting rounds each person's share upward to a cent.
+- Margin and markup use different denominators. Markup at zero cost is undefined.
+- GPA is credit-weighted on a configurable numeric scale; schools' letter-grade
+  mappings are intentionally not assumed.
+- Grade modes calculate a normalized weighted average, final coursework/exam grade,
+  or the exam percentage and whole marks needed for a target. Impossible targets
+  are explicitly identified. Assessment weights cannot exceed 100%.
+- BMI supports kg/cm and lb/total inches, preserving measurements on unit changes.
+  Adult categories follow CDC guidance for ages 20+, not children or pregnancy.
+- Date/age arithmetic uses Gregorian civil dates in UTC. Elapsed days exclude the
+  end date. Whole calendar months clamp anniversaries to month end; leap-day ages
+  use February 28 in non-leap years. This is not a jurisdiction-specific legal age.
+- Invalid/blank values, zero denominators, impossible dates, and numeric overflow
+  are rejected with visible messages. Changing an input clears stale results.
+
+Reference sources:
+[CDC adult BMI categories](https://www.cdc.gov/bmi/adult-calculator/bmi-categories.html),
+[CFPB amortization explanation](https://www.consumerfinance.gov/ask-cfpb/what-is-amortization-and-how-could-it-affect-my-auto-loan-en-771/),
+[Investor.gov compound interest calculator](https://www.investor.gov/financial-tools-calculators/calculators/compound-interest-calculator).
+
+`tests/calculators.test.ts` checks every calculator, including zero interest,
+amortization balance, inclusive-tax reversal, fractional splits, grade limits,
+leap days, month ends, invalid expressions, and every registry default.

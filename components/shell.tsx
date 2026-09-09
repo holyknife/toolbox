@@ -11,7 +11,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const dark = mounted && resolvedTheme === 'dark';
-  const current = tools.find(t => path === `/tools/${t.slug}`);
+  const current = tools.find(t => (path === `/tools/${t.slug}` || path.startsWith(`/tools/${t.slug}/`)));
   return <div className="app-shell">
     <a className="skip-link" href="#main">Skip to content</a>
     <aside className="sidebar">
