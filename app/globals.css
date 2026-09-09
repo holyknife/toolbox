@@ -2,12 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-.date-wheel-frame{position:relative;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg)}
-.date-wheel-selection{position:absolute;top:5.5rem;height:2.75rem;left:0;right:0;background:var(--accent-soft);border-top:1px solid var(--border);border-bottom:1px solid var(--border);pointer-events:none}
-.date-wheel{position:relative;height:13.75rem;overflow-y:auto;overscroll-behavior:contain;scroll-snap-type:y mandatory;scrollbar-width:none;padding:5.5rem 0;mask-image:linear-gradient(to bottom,transparent,var(--text) 30%,var(--text) 70%,transparent)}
-.date-wheel::-webkit-scrollbar{display:none}
-.date-wheel:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
-.date-wheel-item{height:2.75rem;display:flex;align-items:center;justify-content:center;scroll-snap-align:center;font-size:.875rem;cursor:pointer;user-select:none}
+.wheel-picker-frame{position:relative;border-radius:12px;overflow:hidden;background:var(--bg)}
+.wheel-picker-selection{position:absolute;top:5.5rem;height:2.75rem;left:0;right:0;background:var(--accent-soft);border-top:1px solid var(--border);border-bottom:1px solid var(--border);pointer-events:none}
+.wheel-picker{position:relative;height:13.75rem;overflow:clip;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.wheel-picker[data-dragging]{cursor:grabbing}
+.wheel-picker:focus-visible{outline:2px solid var(--accent);outline-offset:-3px;border-radius:12px}
+.wheel-picker-track{padding-top:5.5rem;will-change:transform}
+.wheel-picker-item{height:2.75rem;display:flex;align-items:center;justify-content:center;font-size:.875rem;color:var(--text-dim);transform-origin:center;will-change:transform,opacity}
+.wheel-picker-item[data-centered="true"]{color:var(--text);font-weight:700}
 .date-result{background:var(--accent);color:var(--accent-contrast)}
 
 :root{--bg:#f8f9fb;--panel:#ffffff;--border:#e5e8ee;--text:#202631;--text-dim:#68717f;--accent:#385ee8;--accent-soft:#edf1ff;--accent-contrast:#ffffff;--muted:#f1f3f6;--radius:16px;color-scheme:light}

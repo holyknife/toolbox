@@ -110,10 +110,26 @@ and 16,384 pixels per side to avoid unreliable large allocations.
 ## BS ↔ AD Date Converter
 
 `app/tools/date-converter/page.tsx` wraps the client UI in `date-converter.tsx`.
-`date-wheel.tsx` contains the scroll/tap/keyboard picker. `convert.ts` keeps date
+`components/WheelPicker.tsx` contains the reusable drag/swipe/keyboard picker. `convert.ts` keeps date
 math and formatting independent of React. There is one wheel interface, with
 BS-to-AD and AD-to-BS direction buttons, Nepal-local Today, and Copy result.
 Changing direction preserves the selected day. Month changes clamp invalid days.
+
+`WheelPicker` accepts `label`, a numeric `value`, an array of `{ value, label }`
+options, and `onChange`. Mouse and touch share Pointer Events with capture.
+Release velocity projects the next row, then requestAnimationFrame applies a
+cubic ease-out to land on its exact center. Only transforms and opacity change
+during frames; React receives the selected value once motion settles. Resizing
+remeasures row height. External value/option updates cancel stale animations.
+Reduced-motion preferences disable momentum and snap immediately on release.
+
+Browser checks covered desktop mouse drag/inertia and clicking a neighboring
+month, plus a 390×844 phone viewport in both themes. The fixture in
+`tests/wheel-browser-fixture.tsx` exercised simulated touch pointer gestures,
+cancellation, independent columns, shorter-month clamping, exact centering,
+and reduced-motion snapping. This is browser simulation, not physical iPhone
+or mobile Safari validation. The fixture can be mounted on a temporary dev-only
+route for reruns; no test route is included in the app.
 
 The data is bundled from
 [`@sonill/nepali-dates@1.0.7`](https://cdn.jsdelivr.net/npm/@sonill/nepali-dates@1.0.7/data/calendar-data.json),

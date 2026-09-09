@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ArrowLeftRight, CalendarDays, Copy, RotateCcw } from 'lucide-react';
-import DateWheel from './date-wheel';
+import WheelPicker from '@/components/WheelPicker';
 import { AD_MONTHS, BS_MONTHS, MIN_AD_DATE, MAX_AD_DATE, MIN_BS_YEAR, MAX_BS_YEAR, adToBs, bsToAd, clampPickerDate, daysInMonth, numericDate, readableDate, todayInNepal, weekday, type Calendar, type CalendarDate } from './convert';
 
 // Build straightforward numeric options for the year and day wheels.
@@ -85,11 +85,11 @@ export default function DateConverter() {
         </div>
         <h2 className="mb-5 text-base font-medium">Choose a {calendar === 'BS' ? 'Nepali' : 'Gregorian'} date <span className="text-dim">({calendar})</span></h2>
         <div key={calendar} className="grid grid-cols-[1fr_1.5fr_1fr] gap-2 sm:gap-4">
-          <DateWheel label="Year" value={date.year} options={years} onChange={value => changePart('year', value)}/>
-          <DateWheel label="Month" value={date.month} options={months} onChange={value => changePart('month', value)}/>
-          <DateWheel label="Day" value={date.day} options={days} onChange={value => changePart('day', value)}/>
+          <WheelPicker label="Year" value={date.year} options={years} onChange={value => changePart('year', value)}/>
+          <WheelPicker label="Month" value={date.month} options={months} onChange={value => changePart('month', value)}/>
+          <WheelPicker label="Day" value={date.day} options={days} onChange={value => changePart('day', value)}/>
         </div>
-        <p className="mb-6 mt-4 text-center text-xs leading-relaxed text-dim">Scroll or tap to choose. Use arrow keys when a wheel is focused.</p>
+        <p className="mb-6 mt-4 text-center text-xs leading-relaxed text-dim">Drag, swipe, or scroll to spin. Tap a value to center it. Arrow keys work too.</p>
         <div className="date-result rounded-panel p-6 text-center">
           <p className="mb-2 text-xs font-semibold uppercase tracking-widest">Equivalent {resultCalendar} date</p>
           <div aria-live="polite" aria-atomic="true"><h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{readableDate(result, resultCalendar)}</h2><p className="mt-2 text-sm">{weekday(adDate)} · {numericDate(result)} {resultCalendar}</p></div>
