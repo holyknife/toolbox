@@ -28,13 +28,47 @@ export function transliterateWord(roman: string): string {
     || Sanscript.t(roman, 'itrans', 'devanagari', { syncope:true });
 }
 
-// Offer local spellings plus literal ITRANS and explicit final-halant variants.
+// Generate single sound changes, not every combination, so suggestions stay useful
+// and a long word cannot cause an exponential amount of work. These are spelling
+// possibilities, not claims that each result is a dictionary word.
+function phoneticVariants(roman: string): string[] {
+  const variants: string[] = [];
+  const syllable = roman.match(/^(kh|gh|chh|ch|jh|th|dh|ph|bh|[kgcjtdnpbmrlyvsh])([aiueo]|aa|ii|uu|ai|au)$/i);
+  if (syllable) {
+    const consonant = syllable[1];
+    const vowel = syllable[2];
+    variants.push(consonant + consonant + vowel);
+    variants.push(consonant + 'y' + vowel);
+    if (vowel === 'a') variants.push(consonant + 'yaa');
+  }
+
+  // Short/long vowels and familiar Roman ambiguities provide choices for any word.
+  const sounds = roman.matchAll(/aa|ii|ee|uu|oo|ai|au|sh|chh|ch|[aiuvbs]/g);
+  const alternatives: Record<string,string[]> = {
+    a:['aa'], aa:['a'], i:['ii'], ii:['i'], ee:['i','ii'],
+    u:['uu'], uu:['u'], oo:['u','uu'], ai:['aa'], au:['o'],
+    b:['v'], v:['b'], s:['sh'], sh:['s'], ch:['chh'], chh:['ch'],
+  };
+  for (const sound of sounds) {
+    for (const replacement of alternatives[sound[0]] || []) {
+      const start = sound.index!;
+      variants.push(roman.slice(0,start) + replacement + roman.slice(start + sound[0].length));
+      if (variants.length >= 16) return variants;
+    }
+  }
+  return variants;
+}
+
+// Preserve the familiar first choice, then offer other locally generated spellings.
+// No external prediction API is used; users can refine the Roman spelling in the UI.
 export function suggestionsFor(roman: string): string[] {
   if (!/^[a-z]+$/i.test(roman)) return [];
   const preferred = commonWords[roman.toLowerCase()] || [];
   const literal = Sanscript.t(roman, 'itrans', 'devanagari', { syncope:true });
   const precise = Sanscript.t(roman, 'itrans', 'devanagari');
-  return [...new Set([...preferred, literal, precise])];
+  const variants = phoneticVariants(roman).map(value =>
+    Sanscript.t(value, 'itrans', 'devanagari', { syncope:true }));
+  return [...new Set([...preferred, literal, ...variants, precise])].slice(0,12);
 }
 
 // Convert phrases without changing whitespace, numbers, or punctuation.

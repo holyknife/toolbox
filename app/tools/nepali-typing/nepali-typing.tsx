@@ -78,7 +78,12 @@ export default function NepaliTyping() {
   function previewWord(text: string, caret: number) {
     if (!draft.nepali || !engine.current || composing.current) { setSuggestions(null); return; }
     const match = text.slice(0,caret).match(/[a-z]+$/i);
-    if (!match) { setSuggestions(null); return; }
+    if (!match) {
+      // A delayed textarea selection event must not hide choices just opened by
+      // Backspace. Keep them while the caret is still on that converted word.
+      setSuggestions(previous => previous && caret >= previous.start && caret <= previous.end + 1 ? previous : null);
+      return;
+    }
     try {
       setSuggestions({ start:caret - match[0].length, end:caret, roman:match[0], options:engine.current.suggestionsFor(match[0]) });
     } catch { setActionError('This word could not be converted. Your original text has been kept.'); }
@@ -89,6 +94,8 @@ export default function NepaliTyping() {
     const text = event.currentTarget.value;
     const caret = event.currentTarget.selectionStart;
     const edit = applyTextEdit(draft,text);
+    // Any text edit invalidates the previous popup's replacement range.
+    setSuggestions(null);
     let next = edit.draft;
     let nextCaret = caret;
     setActionError('');
@@ -110,7 +117,7 @@ export default function NepaliTyping() {
       || draft.words.find(item => caret === item.end + 1 && /\s/.test(draft.text[item.end]));
     if (!word) return false;
     try {
-      setSuggestions({ ...word, options:engine.current.suggestionsFor(word.roman) });
+      setSuggestions({ ...word, options:[...new Set([draft.text.slice(word.start,word.end), ...engine.current.suggestionsFor(word.roman)])] });
       return true;
     } catch { setActionError('Suggestions could not be loaded for this word. You can edit it directly.'); return false; }
   }
@@ -120,6 +127,14 @@ export default function NepaliTyping() {
     if (!suggestions) return;
     updateDraft(replaceRange(draft,suggestions.start,suggestions.end,value,suggestions.roman),suggestions.start + value.length);
     setSuggestions(null);
+  }
+
+  // Refine candidates without changing the document until a suggestion is chosen.
+  function refineSpelling(roman: string) {
+    if (!suggestions || !engine.current) return;
+    try {
+      setSuggestions({ ...suggestions, roman, options:engine.current.suggestionsFor(roman) });
+    } catch { setActionError('Suggestions could not be refreshed. Your word has not changed.'); }
   }
 
   // Ctrl+G changes only future typing, allowing both languages in the same document.
@@ -193,15 +208,22 @@ export default function NepaliTyping() {
         className="min-h-80 w-full resize-y rounded-panel border border-border bg-bg p-4 text-xl leading-loose text-text outline-none focus:border-accent sm:min-h-96"/>
       {suggestions && <div id="nepali-suggestions" className="mt-2 rounded-panel border border-border bg-bg p-3" aria-label="Word suggestions">
         <div className="mb-2 flex items-center justify-between gap-3"><p className="text-xs text-dim">Suggestions for <span className="text-text">{suggestions.roman}</span></p><button onClick={() => setSuggestions(null)} className="text-xs text-dim">Dismiss</button></div>
+        <label htmlFor="suggestion-spelling" className="mb-3 block text-xs text-dim">Try another spelling
+          <input id="suggestion-spelling" value={suggestions.roman} onChange={event => refineSpelling(event.target.value)}
+            onKeyDown={event => { if (event.key === 'Escape') { setSuggestions(null); editor.current?.focus(); } }}
+            autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder="e.g. ma, maa, mma, mya"
+            className="mt-1 block w-full rounded-panel border border-border bg-panel px-3 py-2 text-sm text-text outline-none focus:border-accent"/>
+        </label>
+        {!suggestions.options.length && <p className="mb-2 text-sm text-dim">Enter one word using English letters to see spellings.</p>}
         <div className="flex flex-wrap gap-2">{suggestions.options.map((value,index) => <button id={`nepali-suggestion-${index}`} key={value} onMouseDown={event => event.preventDefault()} onClick={() => chooseWord(value)}
           onKeyDown={event => { if (event.key === 'Escape') { setSuggestions(null); editor.current?.focus(); } }}
           className="rounded-panel border border-border bg-panel px-4 py-2 text-lg text-text focus:outline-accent">{value}</button>)}
-          <button onMouseDown={event => event.preventDefault()} onClick={() => chooseWord(suggestions.roman)} className="rounded-panel border border-border px-3 py-2 text-sm text-dim">Keep {suggestions.roman}</button>
+          <button disabled={!suggestions.options.length} onMouseDown={event => event.preventDefault()} onClick={() => chooseWord(suggestions.roman)} className="rounded-panel border border-border px-3 py-2 text-sm text-dim">Keep {suggestions.roman}</button>
         </div>
       </div>}
       <div className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-dim"><span>{counts.characters.toLocaleString()} characters · {counts.words.toLocaleString()} words</span><span>{engineReady ? 'Offline transliteration · no text uploads' : 'Loading Nepali typing…'}</span></div>
       <p id="typing-help" className="mt-4 text-sm leading-relaxed text-dim">Space, Enter, or punctuation converts a word. Click a converted word or press Backspace after it to see alternatives. Press Backspace again to delete, or ↓ to enter suggestions. English mode keeps your letters as typed.</p>
-      <p className="mt-2 text-xs leading-relaxed text-dim">Local spelling suggestions are limited, not predictive. For precise spellings, try aa / ii / uu for long vowels, T / D / N for ट / ड / ण, and sh for श. Character counts include vowel marks and spaces.</p>
+      <p className="mt-2 text-xs leading-relaxed text-dim">Suggestions include alternate spellings and sound combinations. Use “Try another spelling” for more choices; these are not dictionary predictions. For precise spellings, try aa / ii / uu for long vowels, T / D / N for ट / ड / ण, and sh for श. Character counts include vowel marks and spaces.</p>
       <div className="mt-6 flex flex-wrap gap-3">
         <button disabled={!draft.text} onClick={copyText} className="primary-button"><Copy size={16}/>Copy text</button>
         <button disabled={!draft.text} onClick={downloadText} className="flex items-center gap-2 rounded-panel border border-border px-4 py-2 text-sm text-text"><Download size={16}/>Download .txt</button>

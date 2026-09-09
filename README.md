@@ -252,7 +252,11 @@ Existing text is preserved. Native IME composition is left alone.
 This is a deterministic phonetic editor, **not a Google-quality predictive
 dictionary**. Familiar spellings such as `dhanyabad`, `tapai`, and `ramro`
 have local corrections; other words use ITRANS with final-schwa handling.
-Alternatives include the spelling list and literal ITRANS forms. For precision,
+Alternatives include the spelling list, literal ITRANS forms, short/long vowels,
+doubled consonants, and ya combinations. For example, `ma` offers म, मा, म्म, म्य,
+and म्या. Up to 12 unique choices are shown, with the familiar default first.
+These are possible spellings, not guaranteed dictionary words. “Try another
+spelling” refreshes choices without changing the document until one is selected. For precision,
 use aa/ii/uu, sh, and capital T/D/N. Add vocabulary in `commonWords` in
 `transliterate.ts`. No application text-length limit is imposed; browser memory
 and localStorage quota still apply. The character counter counts Unicode code
@@ -290,3 +294,10 @@ Sources: [Sanscript documentation](https://github.com/indic-transliteration/sans
 `tests/nepali-typing.test.ts` covers known conversions, local alternatives,
 multiword paste/newlines, mixed-language editing, word-range adjustments,
 Unicode counts, draft round trips, corrupt data, quota errors, and reset.
+
+API follow-up checked 2026-09-09: no hosted service with a documented free,
+unlimited guarantee was verified. [Google Input Tools](https://www.google.com/inputtools/help/languages.html)
+supports Nepali, and [AI4Bharat IndicXlit](https://github.com/AI4Bharat/IndicXlit)
+offers Nepali models and hosted interfaces, but neither source establishes such
+a guarantee for this app. The expanded suggestions therefore remain entirely
+local, with no API quota or transmitted text.

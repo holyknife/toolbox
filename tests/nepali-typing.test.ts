@@ -59,3 +59,25 @@ test('draft save/restore uses the shared adapter, retains word history, and repo
     await assert.rejects(storage.set('nepali-typing','draft',draft),/Quota/);
   } finally { Reflect.deleteProperty(globalThis,'window'); }
 });
+
+test('short syllables offer doubled consonants, ya forms, and long vowels offline', () => {
+  const choices = suggestionsFor('ma');
+  for (const expected of ['म','मा','म्म','म्य','म्या']) assert.ok(choices.includes(expected),expected);
+  assert.equal(choices[0],'म');
+  assert.ok(suggestionsFor('ka').includes('क्या'));
+  assert.ok(suggestionsFor('kalam').includes('कालम'));
+  assert.deepEqual(suggestionsFor('two words'),[]);
+  assert.deepEqual(suggestionsFor(''),[]);
+  assert.equal(new Set(choices).size,choices.length);
+  assert.ok(suggestionsFor('dhanyabad').length <= 12);
+});
+
+test('choosing and saving a refined spelling preserves its replacement range', () => {
+  const original = commitWords({ ...emptyDraft,text:'ma namaste ',words:[] },0,11,transliterateWord).draft;
+  const chosen = replaceRange(original,original.words[0].start,original.words[0].end,'म्या','myaa');
+  const restored = readDraft(JSON.parse(JSON.stringify(chosen)));
+  assert.equal(restored.text,'म्या नमस्ते ');
+  assert.equal(restored.words[0].roman,'myaa');
+  assert.ok(suggestionsFor(restored.words[0].roman).includes('म्या'));
+  assert.equal(restored.text.slice(restored.words[1].start,restored.words[1].end),'नमस्ते');
+});
