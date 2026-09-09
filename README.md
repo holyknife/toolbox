@@ -144,6 +144,65 @@ missing years. Accuracy follows the community dataset, including future years.
 To update data, replace it with a reviewed version from the same source, retain
 the license, and rerun the reference-pair and full-range round-trip tests.
 
+## QR Code Generator
+
+`app/tools/qr-generator/page.tsx` is the server entry; `qr-generator.tsx` owns
+client state and orchestrates generation. `qr-types.ts` defines the content
+types, `qr-builder.ts` creates the payloads, `qr-input-fields.tsx` renders the
+forms, `qr-renderer.ts` produces PNGs, and `qr-downloads.ts` packages ZIPs.
+
+Supported payloads: text/URL, standard WiFi join strings, vCard 3.0 contacts,
+mailto email, and tel phone numbers. Scanners offer the corresponding action;
+the user still confirms joining, saving contacts, sending email, or calling.
+WiFi reserved characters and vCard text are escaped; URI fields are encoded.
+Single downloads and batches share the same rendering function. Batch text
+means one text/URL per nonblank line. Each QR is capped at 2,000 UTF-8 bytes and
+each generation at 100 entries. PNG sizes are 256, 512, 1024, and 2048 pixels.
+
+The actively maintained [`qr` encoder](https://github.com/paulmillr/qr) is pinned
+to 0.7.0. Only its encoding entry is shipped; no camera/decoder API is used by
+the app. Tests import its decoder to verify all five payload types. Rendering
+uses medium error correction, a four-module quiet zone, integer pixels, and
+at least three pixels per module. Dense codes require a larger output size.
+Any foreground/background color combination is allowed. Shared `--qr-ink` and
+`--qr-paper` defaults live in `app/globals.css` and stay dark-on-light in both
+UI themes. No logo or decorative QR modifications are supported.
+
+[`JSZip`](https://github.com/Stuk/jszip) loads only when creating the ZIP. Images
+use unique numbered filenames so duplicate SSIDs cannot overwrite each other.
+All input, passwords, previews, and generated files stay in browser memory;
+nothing is uploaded or saved to localStorage. Object URLs are released on
+replacement and unmount. Anyone holding a WiFi QR can read its credentials.
+
+### MIUI WiFi .bak compatibility
+
+`miui-bak-parser.ts` is based on community reverse-engineering, **not an official
+Xiaomi spec**. It supports the documented five-line MIUI v2 wrapper, unencrypted
+Android backup versions 1–5 (uncompressed or zlib-compressed TAR), regular WiFi
+TAR members, and plain exported WiFi configuration text. Recognized payloads
+are `wpa_supplicant` network blocks, `WifiBackupData` XML, and
+`WifiConfigStoreData` XML. WPA/WPA2 Personal, WEP, and explicitly open networks
+are accepted when required credentials validate. Raw hashed PSKs, encrypted or
+masked passwords, enterprise/WPA3-only security, unknown binary formats, and
+unfamiliar header versions are not recovered or guessed.
+
+Files are limited to 20 MB compressed / 40 MB expanded and 500 parsed networks;
+select up to 100 for each batch. TAR checksums and lengths, XML structure, SSIDs,
+and credentials are checked. Invalid individual records produce a warning;
+unreadable backups show a manual-WiFi fallback. The review list displays SSIDs
+and security types, with selection checkboxes, **before** generating any QR.
+
+Compatibility tests use synthetic fixtures of these known structures, not a
+user's real backup or every MIUI/HyperOS release. Some versions use other binary
+settings payloads and will show an unsupported-format error.
+
+Research sources:
+
+- [MIUI wrapper reverse-engineering](https://github.com/nelenkov/android-backup-extractor/pull/79)
+- [Android backup headers and zlib/TAR](https://github.com/nelenkov/android-backup-extractor)
+- [Android WiFi backup structures](https://android.googlesource.com/platform/packages/modules/Wifi/+/434811d2c3/service/java/com/android/server/wifi/WifiBackupRestore.java)
+- [WiFi and contact QR conventions](https://github.com/zxing/zxing/wiki/Barcode-Contents)
+
 ## Storage and future accounts
 
 The most recent five complete speed tests are stored on this device. Tools
