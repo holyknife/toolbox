@@ -1,0 +1,5 @@
+network={
+ssid="Toolbox Import Test"
+psk="testpassword123"
+key_mgmt=WPA-PSK
+}
