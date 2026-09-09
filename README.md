@@ -227,3 +227,66 @@ Next.js 14.2.35 is pinned to honor the requested version. Next.js 14 is outside
 the currently patched release lines; upgrade before public production hosting.
 See the [official security release](https://vercel.com/changelog/next-js-may-2026-security-release).
 This deliverable is a local development app; it has not been deployed.
+
+### Nepali Typing
+
+Files live in `app/tools/nepali-typing/`: `page.tsx` contains server metadata,
+`nepali-typing.tsx` handles the textarea and browser actions, `transliterate.ts`
+contains offline conversion/suggestions, and `editor-state.ts` holds pure editing
+and draft-validation functions.
+
+**No external transliteration service is used.** Sanscript is bundled with the
+app and supplemented by a small, editable Nepali spelling list. Once the page
+and its typing bundle have loaded, conversion and suggestions work without a
+network connection. This is not an installable offline PWA: opening/reloading
+the site from scratch still requires the app server or a cached page.
+The dynamic package load has a visible retry action on failure.
+
+Type Roman words and press Space, Enter, or punctuation to convert. Suggestions
+appear while typing. Click a converted word or press Backspace immediately after
+one to revisit its alternatives; another Backspace deletes normally. Arrow Down
+moves into suggestions, Tab moves between them, Enter chooses, and Escape closes.
+Ctrl+G or the mode button toggles future typing between English and Nepali.
+Existing text is preserved. Native IME composition is left alone.
+
+This is a deterministic phonetic editor, **not a Google-quality predictive
+dictionary**. Familiar spellings such as `dhanyabad`, `tapai`, and `ramro`
+have local corrections; other words use ITRANS with final-schwa handling.
+Alternatives include the spelling list and literal ITRANS forms. For precision,
+use aa/ii/uu, sh, and capital T/D/N. Add vocabulary in `commonWords` in
+`transliterate.ts`. No application text-length limit is imposed; browser memory
+and localStorage quota still apply. The character counter counts Unicode code
+points (including combining marks and spaces); words are whitespace-separated.
+
+Drafts are saved on every edit through `lib/storage.ts`, under the tool's own
+namespace. Text, mode, and original Roman spellings are restored together, so
+suggestions remain available after reload. The adapter's optional strict read
+reports invalid JSON without changing the forgiving default for existing tools.
+Invalid draft shapes, blocked/full storage, clipboard failures, and download
+failures are shown in the UI. Copy/download remain available if saving fails.
+Clear saves an empty draft.
+
+Package comparison checked 2026-09-09 using npm's registry and downloads API.
+Downloads cover 2026-08-31 through 2026-09-06; publication dates below refer to the
+latest release, not metadata-only updates.
+
+| Package | Latest version | Published | Weekly downloads | Approach |
+| --- | --- | --- | --- | --- |
+| @indic-transliteration/sanscript | 1.3.3 | 2025-06-08 | 5,752 | Bundled, offline |
+| easy-typing-input-tool | 2.1.3 | 2025-04-03 | 6 | Wraps google-input-tool |
+| google-input-tool | 1.4.3 | 2020-05-09 | 30 | External Google service |
+
+Sanscript had the newer release and much broader usage of these candidates,
+without depending on an unofficial remote input endpoint. Its latest release
+is over a year old; this comparison does not imply frequent releases.
+`roman-to-nepali` returned 404 from the npm registry during this check.
+
+Sources: [Sanscript documentation](https://github.com/indic-transliteration/sanscript.js),
+[Google wrapper source](https://github.com/sambhuWeb/google-input-tool),
+[Easy Typing source](https://github.com/sambhuWeb/easytyping-google-input-tool),
+[npm package metadata](https://registry.npmjs.org/@indic-transliteration%2fsanscript),
+[npm download statistics](https://api.npmjs.org/downloads/point/2026-08-31:2026-09-06/@indic-transliteration%2fsanscript).
+
+`tests/nepali-typing.test.ts` covers known conversions, local alternatives,
+multiword paste/newlines, mixed-language editing, word-range adjustments,
+Unicode counts, draft round trips, corrupt data, quota errors, and reset.
