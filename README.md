@@ -102,6 +102,59 @@ Wi-Fi, VPNs, server load, and browser overhead affect measurements. For a useful
 comparison, keep the tab visible, stop other downloads, and repeat on the same
 device. Networks blocking Cloudflare produce a visible error.
 
+## Preeti to Unicode
+
+Open `/tools/preeti-to-unicode` or find it in the Language tools. Paste the
+Preeti-encoded portions of a document into the source pane; Unicode appears in
+the second pane. Copy it or download a UTF-8 `.txt` file. Source text stays intact.
+Conversion is entirely local after the page loads: no conversion API, remote
+font, added package, or text upload. This tool does not persist your text.
+
+Preeti is a legacy glyph encoding, not phonetic Roman Nepali. For example,
+`g]kfnL` represents `नेपाली`. Plain text loses the original font information,
+so English and Preeti cannot be reliably distinguished automatically. Paste only
+the Preeti sections of mixed-font documents. Existing Unicode Nepali and exact
+spaces, tabs, and line breaks are preserved. This does not import Word formatting,
+convert other legacy fonts, or perform OCR on scans. For `namaste`-style input,
+use Nepali Typing instead.
+
+Implementation files each have one job:
+
+- `page.tsx`: server metadata and entry point.
+- `preeti-converter.tsx`: source/result panes, review notices, copy and download.
+- `preeti-map.ts`: legacy glyph positions.
+- `convert.ts`: extension strokes, syllable ordering, vowel composition, diagnostics.
+
+Research checked on September 10, 2026:
+
+- [Unicode's Devanagari specification](https://www.unicode.org/versions/Unicode17.0.0/core-spec/chapter-12/)
+  explains logical character order, virama, and rendering.
+- [Shuvayatra/preeti](https://github.com/Shuvayatra/preeti) and
+  [npttf2utf](https://github.com/casualsnek/npttf2utf) provide community mapping
+  references. The conversion functions here are a separate implementation;
+  neither project's engine is installed or bundled.
+- [The dpr4dhan converter source](https://github.com/dpr4dhan/preeti-to-unicode)
+  was also inspected. Package documentation and current source disagreed, so
+  published claims of completeness were not treated as proof of correctness.
+
+The converter moves visual short-i before a cluster into logical Unicode order,
+moves trailing reph before the whole consonant cluster, handles extension strokes
+such as `km` (फ), and combines legacy vowel pieces. Reordering is limited to
+legacy runs and cannot cross whitespace, existing Unicode, or unknown characters.
+Unsupported symbols and unattached strokes remain visible with a review notice.
+It deliberately does not spell-check text or silently delete repeated vowel signs.
+Published tables disagree about `¥`: if present, the UI offers rakaar (`्र`, the
+npttf2utf default) or eyelash ra (`र्‍`, the Shuvayatra alternative). Compare with
+the original document before choosing.
+
+Validation: `tests/preeti.test.ts` covers known words, half forms, conjuncts,
+short-i/reph placement, extension strokes, vowel ordering, digits, punctuation,
+mixed Unicode, exact whitespace, unsupported input, and 10,000 repeated lines.
+The implementation also matched all 48 published Shuvayatra examples when using
+that reference's eyelash-ra choice. These checks do not guarantee recovery of
+damaged PDF extraction, modified font encodings, or every possible legacy typo;
+review names and unusual symbols against the source document.
+
 ## Photo Compressor
 
 `app/tools/photo-compressor/page.tsx` exports metadata and renders the client UI
