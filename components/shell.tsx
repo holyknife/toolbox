@@ -22,6 +22,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <div className="sidebar-bottom"><span className="small-mark"><Boxes size={17}/></span><p>A little less effort.<br/><strong>A lot more done.</strong></p><span className="version">Toolbox / v1.0</span></div>
     </aside>
     <div className="main-shell"><header className="header"><div className="breadcrumb"><span>Workspace</span><span className="slash">/</span><span>{current?.name ?? (path === '/' ? 'All tools' : 'Page not found')}</span></div><div className="header-right"><span className="header-note">Small tools. Everyday useful.</span><button className="icon-button" onClick={() => setTheme(dark ? 'light' : 'dark')} aria-label={`Switch to ${dark ? 'light' : 'dark'} theme`} title={`Switch to ${dark ? 'light' : 'dark'} theme`}>{dark ? <Sun size={19}/> : <Moon size={19}/>}</button></div></header>
-    <main id="main">{children}</main><footer><span>Made for the everyday.</span><span>Simple by design <ArrowUpRight size={13}/></span></footer></div>
+    <main id="main">
+      {/* A route key restarts the entrance animation without remounting the shell. */}
+      <div key={path} className="page-transition">{children}</div>
+    </main><footer><span>Made for the everyday.</span><span>Simple by design <ArrowUpRight size={13}/></span></footer></div>
   </div>;
 }
