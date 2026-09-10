@@ -73,34 +73,47 @@ network access during the initial development/production compilation.
 
 ## Speed test
 
-The measurement logic lives in `app/tools/speed-test/measure.ts`. Method v2
-discards a connection warm-up, then measures ten HTTP latency probes for
-median ping and jitter (the mean change between successive probe times).
-Each direction has a discarded 256 KB warm-up followed by three sustained
-rounds of at least six seconds. Payload sizes adapt between 64 KB and 25 MB.
-The displayed speed is the median of those rounds, with their observed range.
-Small parallel probes also report latency during download and upload.
+Method `parallel-v3` runs entirely in the browser against Cloudflare's public
+`/__down` and `/__up` endpoints. No extra package or result telemetry is added.
 
-Only complete download bodies and acknowledged uploads count. Full wall-clock
-time includes request overhead and the final transfer; upload payloads contain
-random bytes. Every request bypasses caches and has a timeout. Cancel, leaving
-the page, or hiding the tab aborts the test so background throttling cannot
-produce a saved result. Older history entries are labelled "Earlier method".
+- **Ping:** discard one setup request and take ten zero-body HTTP probes. The
+  headline is the median; the mean and jitter are also shown. When cross-origin
+  Resource Timing is exposed, `responseStart - requestStart` excludes DNS/TCP/TLS
+  setup. Otherwise the UI labels the warmed HTTP elapsed-time fallback. Server
+  processing still contributes; this is not ICMP or game-server ping. A 370 ms
+  result is not automatically wrong and is never artificially clamped.
+- **Throughput:** four concurrent adaptive request streams warm for at least two
+  seconds before any scored traffic. Three windows of at least four seconds each
+  use total acknowledged bytes / shared elapsed wall time. Final speed is their
+  median and the range shows variation. The final requests finish before scoring;
+  no partial request or warm-up bytes inflate results. HTTP/2/3 may multiplex the
+  streams; JavaScript cannot force four distinct TCP connections.
+- **Live display:** downloaded chunks and XHR upload-progress events update the
+  gauge. Upload progress is provisional until the server acknowledges it. The
+  needle/number interpolate real values, respect reduced motion, and have no
+  influence on the final arithmetic. The arc caps visually at 300; numbers do not.
+- **Pause/retry:** hiding the tab cancels traffic for the current phase, shows a
+  paused state, and waits without sending traffic. Returning automatically warms
+  and restarts that phase; completed phases remain. Losing window focus alone
+  does not pause it. Each failed phase retries once, then records its error and
+  continues to the next phase. Partial/manual-stop results stay visible but do
+  not enter completed history. Navigation away still stops the test.
+- **Interpretation/history:** activity guidance is a labelled rule of thumb with
+  visible thresholds, not a guarantee. No packet loss is measured. The last five
+  complete results remain local. Three or more show a chronological sparkline;
+  older methodologies are labelled to avoid misleading comparisons.
 
-Requests go directly to Cloudflare's public `https://speed.cloudflare.com/__down`
-and `/__up` endpoints, with no application server proxy or result telemetry.
-See [Cloudflare's explanation](https://speed.cloudflare.com/about) and
-[their reference engine](https://github.com/cloudflare/speedtest). Our algorithm
-is not a full reproduction of that engine: it measures sequential browser HTTP
-throughput to one provider, not ICMP ping or universal ISP line capacity.
-The range is observed variation, not an accuracy guarantee. Results are never
-capped to an advertised plan speed.
+Files: `network.ts` owns HTTP/XHR progress and timing; `session.ts` owns pause and
+retry; `measure.ts` aggregates samples; `speed-test.tsx` manages UI/history;
+`speed-gauge.tsx` animates the readout; `result-insights.tsx` renders guidance and
+trends. Gradient colors are theme variables in `app/globals.css`.
 
-Tests start only on a click and usually take 30–60 seconds (longer on slow
-connections), using hundreds of MB or more on fast connections. Other traffic,
-Wi-Fi, VPNs, server load, and browser overhead affect measurements. For a useful
-comparison, keep the tab visible, stop other downloads, and repeat on the same
-device. Networks blocking Cloudflare produce a visible error.
+Research: [Cloudflare's reference engine](https://github.com/cloudflare/speedtest)
+uses Resource Timing; [requestStart documentation](https://developer.mozilla.org/en-US/docs/Web/API/PerformanceResourceTiming/requestStart)
+explains timing exposure. This is a separate methodology, not a reproduction of
+their engine. Wi-Fi, other traffic, the device and the server path affect results.
+Tests usually take 30–60 seconds, longer with retries or slow connections, and
+can consume hundreds of MB or more. Tests only start on a click.
 
 ## Preeti to Unicode
 

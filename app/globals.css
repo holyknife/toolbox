@@ -25,6 +25,14 @@
   to{opacity:1;transform:translateY(0)}
 }
 .page-transition{animation:page-enter 220ms ease-out}
+:root{--speed-low:#d96a69;--speed-medium:#c39735;--speed-good:#389c7e;--speed-fast:#527bea}
+[data-theme="dark"]{--speed-low:#ec8b8a;--speed-medium:#dfbc63;--speed-good:#6bc6a6;--speed-fast:#91afff}
+.speed-gauge{width:300px;max-width:100%;margin:18px auto 24px;text-align:center}
+.speed-gauge svg{width:100%;height:auto}
+.speed-number strong{display:block;font-size:46px;line-height:1.1;letter-spacing:-1.5px;font-variant-numeric:tabular-nums}
+.speed-number span,.speed-number small{display:block;color:var(--text-dim);margin-top:7px;font-size:12px}
+.speed-number small{font-size:10px}
+.stat strong{font-size:clamp(13px,2vw,23px);overflow-wrap:anywhere}
 .animated-grid-item{min-width:0;display:flex}
 .animated-grid-item[hidden]{display:none}
 .animated-grid-item>.tool-card,.animated-grid-item>.coming-card{width:100%}
