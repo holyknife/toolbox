@@ -13,7 +13,7 @@ export default function CalculatorSearch({ compact = false }: { compact?: boolea
       <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Try EMI, GPA, age…" className="w-full min-w-0 flex-1 rounded-panel border border-border bg-panel px-3 py-3 text-text outline-none focus:border-accent"/></label>
     {(!compact || query) && <>
       <p className="mb-4 text-xs text-dim">{matches.length} calculators · ordered from simple to more involved</p>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{matches.map(calculator => <Link key={calculator.slug} href={`/tools/calculators/${calculator.slug}`} onClick={() => setQuery('')} className="rounded-panel border border-border bg-panel p-4 hover:border-accent">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{matches.map(calculator => <Link key={calculator.slug} href={`/tools/calculators/${calculator.slug}`} onClick={() => setQuery('')} className="interaction-card rounded-panel border border-border bg-panel p-4 hover:border-accent">
         <div className="flex items-center justify-between gap-2"><span className="text-xs text-dim">{String(calculators.indexOf(calculator) + 1).padStart(2,'0')} · {calculator.category}</span><ArrowUpRight size={16} className="text-accent"/></div>
         <h3 className="mt-3 font-semibold text-text">{calculator.name}</h3><p className="mt-2 text-sm text-dim">{calculator.description}</p>
       </Link>)}</div>
