@@ -73,19 +73,34 @@ network access during the initial development/production compilation.
 
 ## Speed test
 
-The pasted tool was migrated to React. It makes six zero-byte HTTP requests
-and reports median latency, streams 25 MB download requests for roughly six
-seconds, then posts 4 MiB payloads for roughly five seconds. Upload duration
-includes completion of the final request. Requests use Cloudflare's public
-`https://speed.cloudflare.com/__down` and `/__up` endpoints directly from the
-browser, with no server proxy. HTTP errors, network failures, and stalled
-requests produce an error message; Cancel or leaving the page aborts work.
+The measurement logic lives in `app/tools/speed-test/measure.ts`. Method v2
+discards a connection warm-up, then measures ten HTTP latency probes for
+median ping and jitter (the mean change between successive probe times).
+Each direction has a discarded 256 KB warm-up followed by three sustained
+rounds of at least six seconds. Payload sizes adapt between 64 KB and 25 MB.
+The displayed speed is the median of those rounds, with their observed range.
+Small parallel probes also report latency during download and upload.
 
-These are approximate browser throughput and HTTP latency measurements, not
-ICMP ping or a full reproduction of Cloudflare's own test algorithm. Other
-traffic, VPNs, server load, and browser overhead affect results. A test can
-use substantial bandwidth on fast connections; it starts only on a click.
-Networks or preview environments blocking Cloudflare may prevent live tests.
+Only complete download bodies and acknowledged uploads count. Full wall-clock
+time includes request overhead and the final transfer; upload payloads contain
+random bytes. Every request bypasses caches and has a timeout. Cancel, leaving
+the page, or hiding the tab aborts the test so background throttling cannot
+produce a saved result. Older history entries are labelled "Earlier method".
+
+Requests go directly to Cloudflare's public `https://speed.cloudflare.com/__down`
+and `/__up` endpoints, with no application server proxy or result telemetry.
+See [Cloudflare's explanation](https://speed.cloudflare.com/about) and
+[their reference engine](https://github.com/cloudflare/speedtest). Our algorithm
+is not a full reproduction of that engine: it measures sequential browser HTTP
+throughput to one provider, not ICMP ping or universal ISP line capacity.
+The range is observed variation, not an accuracy guarantee. Results are never
+capped to an advertised plan speed.
+
+Tests start only on a click and usually take 30–60 seconds (longer on slow
+connections), using hundreds of MB or more on fast connections. Other traffic,
+Wi-Fi, VPNs, server load, and browser overhead affect measurements. For a useful
+comparison, keep the tab visible, stop other downloads, and repeat on the same
+device. Networks blocking Cloudflare produce a visible error.
 
 ## Photo Compressor
 
