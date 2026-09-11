@@ -42,19 +42,21 @@ tests/                      Measurement and storage checks
 ### Word Generator
 
 `app/tools/word-generator/` contains the server page, language selector,
-independent Nepali client component, and random-selection logic. English is a
-placeholder only. Switching languages preserves the current Nepali result.
+independent instances of the language generator, and random-selection logic.
+Switching languages preserves each result and its messages separately. English
+loads on first selection; both instances remain mounted until leaving the tool.
 
-The supplied root `nepali_words_clean.json` contains 111,865 unique words.
-`public/data/nepali_words_clean.json` is an exact copy served as a static asset;
-update both files together when replacing the collection. All supplied spellings
-are preserved. The list loads only when opening this tool, not on the home page.
-After loading, generation runs locally without external APIs or a database.
-Initial loading needs access to the site; this does not add offline page caching.
+The canonical datasets live in `public/data/`: `nepali_words_clean.json` contains
+111,865 unique words and `english_words_clean.json` contains 274,013 unique words.
+All supplied entries and spellings are preserved. Edit these files to update the
+collections; duplicate root copies are not needed. Lists are static assets, kept
+out of the shared JavaScript bundle. After loading, generation runs locally with
+no external APIs or database. Initial loading needs access to the site; this does
+not add offline page caching.
 
 Selection uses Web Crypto `getRandomValues` with rejection sampling to avoid
 modulo bias. Every word has equal probability on every click, including the
-previous word. Tests verify dataset equality, reachability of every entry,
+previous word. Tests verify dataset counts, uniqueness, reachability of every entry,
 rejection of the biased tail, and malformed data handling.
 
 ### Registering tools

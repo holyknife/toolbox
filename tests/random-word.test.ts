@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { randomWord, validateWords } from '../app/tools/word-generator/random-word';
 
-test('published dataset preserves every supplied word exactly', () => {
-  const source = JSON.parse(readFileSync('nepali_words_clean.json', 'utf8'));
-  const published = validateWords(JSON.parse(readFileSync('public/data/nepali_words_clean.json', 'utf8')));
-  assert.deepEqual(published, source);
-  assert.equal(published.length, 111865);
-  assert.equal(new Set(published).size, published.length);
-  for (let index = 0; index < published.length; index++) {
-    assert.equal(randomWord(published, () => index), published[index]);
+test('both complete datasets contain unique words and every entry is reachable', () => {
+  for (const [language, count] of [['nepali', 111865], ['english', 274013]] as const) {
+    const words = validateWords(JSON.parse(readFileSync(`public/data/${language}_words_clean.json`, 'utf8')));
+    assert.equal(words.length, count);
+    assert.equal(new Set(words).size, count);
+    for (let index = 0; index < words.length; index++) {
+      assert.equal(randomWord(words, () => index), words[index]);
+    }
   }
 });
 

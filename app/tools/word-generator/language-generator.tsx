@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Copy, Shuffle } from 'lucide-react';
+import { Copy, Search, Shuffle } from 'lucide-react';
 import { randomWord, validateWords } from './random-word';
 
-// Own the dataset and result here so future English features cannot change them.
-export default function NepaliGenerator() {
+// Each mounted instance owns its words, result, and messages independently.
+export default function LanguageGenerator({ language, dataUrl, languageCode }: { language: string; dataUrl: string; languageCode: string }) {
   const [words, setWords] = useState<string[]>([]);
   const [word, setWord] = useState('');
   const [loading, setLoading] = useState(true);
@@ -19,19 +19,19 @@ export default function NepaliGenerator() {
       setLoading(true);
       setError('');
       try {
-        const response = await fetch('/data/nepali_words_clean.json', { signal: controller.signal });
-        if (!response.ok) throw new Error('Unable to load the Nepali words. Check your connection and try again.');
+        const response = await fetch(dataUrl, { signal: controller.signal });
+        if (!response.ok) throw new Error('Word list request failed.');
         const data: unknown = await response.json();
         if (!controller.signal.aborted) setWords(validateWords(data));
       } catch {
-        if (!controller.signal.aborted) setError('Unable to load the Nepali word list. Check your connection and try again.');
+        if (!controller.signal.aborted) setError(`Unable to load the ${language} word list. Check your connection and try again.`);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
     }
     void loadWords();
     return () => controller.abort();
-  }, [attempt]);
+  }, [attempt, dataUrl, language]);
 
   // Each click makes a fresh, equally weighted draw from the entire list.
   function generate() {
@@ -47,14 +47,16 @@ export default function NepaliGenerator() {
     catch { setMessage('Copy was blocked. Select the word and copy it manually.'); }
   }
 
-  return <section aria-label="Nepali word generator" aria-busy={loading} className="rounded-panel border border-border bg-panel p-6 sm:p-10">
-    <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold text-text">Random Nepali word</h2><span className="text-sm text-dim">{loading ? 'Loading word collection…' : `${words.length.toLocaleString('en-US')} words`}</span></div>
+  return <section aria-label={`${language} word generator`} aria-busy={loading} className="rounded-panel border border-border bg-panel p-6 sm:p-10">
+    <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold text-text">Random {language} word</h2><span className="text-sm text-dim">{loading ? 'Loading word collection…' : `${words.length.toLocaleString('en-US')} words`}</span></div>
     <div className="flex min-h-56 items-center justify-center py-10 text-center" aria-live="polite" aria-atomic="true">
-      {word ? <p lang="ne" className="max-w-full break-words text-4xl font-semibold leading-relaxed text-text sm:text-5xl">{word}</p> : <p className="text-dim">{loading ? 'Getting your words ready…' : 'Tap Generate to discover a word.'}</p>}
+      {word ? <p lang={languageCode} className="max-w-full break-words text-4xl font-semibold leading-relaxed text-text sm:text-5xl">{word}</p> : <p className="text-dim">{loading ? 'Getting your words ready…' : 'Tap Generate to discover a word.'}</p>}
     </div>
     <div className="flex flex-wrap justify-center gap-3">
       <button type="button" className="primary-button !w-auto" disabled={loading || !words.length} onClick={generate}><Shuffle size={18}/>Generate word</button>
       <button type="button" className="rounded-panel border border-border bg-panel px-5 py-3 text-text disabled:opacity-50" disabled={!word} onClick={copyWord}><span className="flex items-center gap-2"><Copy size={16}/>Copy word</span></button>
+      {/* Encode Nepali and punctuation safely; a new tab preserves this generator's result. */}
+      {word && <a href={`https://www.google.com/search?q=${encodeURIComponent(`${word} meaning`)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-panel border border-border bg-panel px-5 py-3 text-text transition-colors duration-200 hover:text-accent" aria-label={`Search meaning of ${word} on Google (opens in a new tab)`}><Search size={16} aria-hidden="true"/>Search meaning</a>}
     </div>
     <p className="mt-6 text-center text-sm text-dim">Every word has an equal chance. Repeats are possible.</p>
     {error && <div role="alert" className="mt-4 text-sm text-text">{error}{!words.length && <button type="button" className="ml-3 text-accent underline" onClick={() => setAttempt(value => value + 1)}>Retry loading</button>}</div>}

@@ -3,7 +3,7 @@ import WordGenerator from './word-generator';
 
 export const metadata: Metadata = {
   title: 'Word Generator',
-  description: 'Discover a random Nepali word from a collection of over 111,000 words.',
+  description: 'Generate random English and Nepali words from independent word collections.',
 };
 
 // Keep metadata on the server while language selection runs in the browser.
