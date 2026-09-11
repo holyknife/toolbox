@@ -6,9 +6,10 @@
  * Use shared CSS variables / Tailwind tokens; never hardcode tool colors.
  * Import any Lucide icon here for the new entry. Slugs must be unique.
  */
-import { Calculator, Languages, CalendarDays, Gauge, ImageDown, QrCode, Type, type LucideIcon } from 'lucide-react';
+import { Calculator, Languages, CalendarDays, Gauge, ImageDown, QrCode, Type, Shuffle, type LucideIcon } from 'lucide-react';
 export interface Tool { slug: string; name: string; description: string; icon: LucideIcon; category: string; keywords?: string[] }
 export const tools: Tool[] = [
+  { slug: 'word-generator', name: 'Word Generator', description: 'Discover a random Nepali word with one tap. English is coming later.', icon: Shuffle, category: 'Language', keywords: ['random', 'Nepali', 'words', 'English'] },
   { slug: 'calculators', name: 'Calculators', description: 'From quick arithmetic to money, grades, health, and dates. Find the right calculator for your question.', icon: Calculator, category: 'Utilities', keywords: ['loan','EMI','compound interest','simple interest','discount','profit margin','GST','VAT','tip','bill splitter','GPA','grade','BMI','aspect ratio','date difference','age'] },
   { slug: 'nepali-typing', name: 'Nepali Typing', description: 'Write Nepali using English letters. Choose spellings, copy your text, and keep a private draft.', icon: Languages, category: 'Language' },
   { slug: 'preeti-to-unicode', name: 'Preeti to Unicode', description: 'Turn legacy Preeti text into Unicode Nepali. Copy, convert, and download privately in your browser.', icon: Type, category: 'Language', keywords: ['font','legacy','Nepali','converter','प्रीति','युनिकोड'] },

@@ -39,6 +39,26 @@ tests/                      Measurement and storage checks
 
 ## Add a tool in two steps
 
+### Word Generator
+
+`app/tools/word-generator/` contains the server page, language selector,
+independent Nepali client component, and random-selection logic. English is a
+placeholder only. Switching languages preserves the current Nepali result.
+
+The supplied root `nepali_words_clean.json` contains 111,865 unique words.
+`public/data/nepali_words_clean.json` is an exact copy served as a static asset;
+update both files together when replacing the collection. All supplied spellings
+are preserved. The list loads only when opening this tool, not on the home page.
+After loading, generation runs locally without external APIs or a database.
+Initial loading needs access to the site; this does not add offline page caching.
+
+Selection uses Web Crypto `getRandomValues` with rejection sampling to avoid
+modulo bias. Every word has equal probability on every click, including the
+previous word. Tests verify dataset equality, reachability of every entry,
+rejection of the biased tail, and malformed data handling.
+
+### Registering tools
+
 1. Create `app/tools/photo-compressor/page.tsx` (or another unique slug).
    Keep its UI components, hooks, and logic in that folder. Components using
    state or browser APIs need `'use client'`. A server page can wrap the client
