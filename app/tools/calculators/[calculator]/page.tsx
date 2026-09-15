@@ -8,12 +8,15 @@ import CalculatorWorkspace from '../calculator-workspace';
 
 // Prebuild each registered calculator and return a real 404 for unknown slugs.
 export function generateStaticParams() { return calculators.map(item => ({calculator:item.slug})); }
-export function generateMetadata({ params }: { params: { calculator: string } }): Metadata {
-  const item = calculators.find(item => item.slug === params.calculator);
+export async function generateMetadata({ params }: { params: Promise<{ calculator: string }> }): Promise<Metadata> {
+  const { calculator } = await params;
+  const item = calculators.find(item => item.slug === calculator);
   return { title:item?.name || 'Calculator not found',description:item?.description };
 }
-export default function Page({ params }: { params: { calculator: string } }) {
-  const item = calculators.find(item => item.slug === params.calculator);
+// Next.js 16 supplies route parameters asynchronously, including prebuilt routes.
+export default async function Page({ params }: { params: Promise<{ calculator: string }> }) {
+  const { calculator } = await params;
+  const item = calculators.find(item => item.slug === calculator);
   if (!item) notFound();
   return <div className="page">
     <Link href="/tools/calculators" className="back-link"><ArrowLeft size={14}/>All calculators</Link>
