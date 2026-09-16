@@ -18,12 +18,15 @@ export default function WheelPicker({ label, value, options, onChange, icon }: W
   const id = useId();
   const viewport = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLDivElement>(null);
-  const position = useRef(0);
+  const initialIndex = options.findIndex(option => option.value === value);
+  const safeInitialIndex = Math.max(0, initialIndex >= 0 ? initialIndex : 0);
+  const position = useRef(safeInitialIndex);
   const height = useRef(44);
   const frame = useRef(0);
   const wheelTimer = useRef<ReturnType<typeof setTimeout>>();
   const reducedMotion = useRef(false);
   const lastPointerRelease = useRef(-Infinity);
+  const hasMounted = useRef(false);
   const drag = useRef<{ id: number; startY: number; lastY: number; lastTime: number; velocity: number; moved: boolean } | null>(null);
   const latest = useRef({ options, value, onChange });
   latest.current = { options, value, onChange };
@@ -74,7 +77,7 @@ export default function WheelPicker({ label, value, options, onChange, icon }: W
     const start = position.current;
     const distance = target - start;
     if (reducedMotion.current || Math.abs(distance) < 0.001) { commit(target); return; }
-    const duration = velocity ? Math.max(200, Math.min(850, 2.6 * Math.abs(distance / velocity))) : 220;
+    const duration = Math.min(600, Math.max(220, 180 + Math.log2(Math.max(1, Math.abs(distance))) * 65));
     const startTime = performance.now();
     function tick(now: number) {
       const progress = Math.min(1, (now - startTime) / duration);
@@ -91,13 +94,27 @@ export default function WheelPicker({ label, value, options, onChange, icon }: W
     settle(current + delta);
   }
 
-  // Parent updates (Today or a shorter month) cancel stale motion and realign the wheel.
+  // Parent updates (direction change, Today, or clamping) spin the wheel smoothly to the new position.
   useEffect(() => {
     stop();
     drag.current = null;
     viewport.current?.removeAttribute('data-dragging');
     const selectedIndex = latest.current.options.findIndex(option => option.value === value);
-    paint(Math.max(0, selectedIndex));
+    const target = Math.max(0, selectedIndex);
+
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      position.current = target;
+      paint(target);
+      return;
+    }
+
+    const currentRounded = Math.round(position.current);
+    if (target !== currentRounded) {
+      settle(target);
+    } else {
+      paint(target);
+    }
   }, [value, optionKey]);
 
   // Read row size only when layout changes; listen for live accessibility preference changes.
@@ -220,20 +237,34 @@ export default function WheelPicker({ label, value, options, onChange, icon }: W
         onLostPointerCapture={event => endDrag(event, true)}
         onKeyDown={handleKey}
       >
-        <div ref={track} className="wheel-picker-track">
-          {options.map((option, index) => <div
-            key={option.value}
-            id={`${id}-${option.value}`}
-            role="option"
-            aria-selected={option.value === value}
-            data-centered={option.value === value}
-            className="wheel-picker-item"
-            onClick={event => {
-              if (event.detail === 0 || performance.now() - lastPointerRelease.current > 100) settle(index);
-            }}
-          >
-            {option.label}
-          </div>)}
+        <div
+          ref={track}
+          className="wheel-picker-track"
+          style={{ transform: `translate3d(0, ${-safeInitialIndex * height.current}px, 0)` }}
+        >
+          {options.map((option, index) => {
+            const distance = Math.abs(index - safeInitialIndex);
+            const initialOpacity = Math.max(0.18, 1 - distance * 0.35);
+            const initialScale = Math.max(0.82, 1 - distance * 0.08);
+
+            return <div
+              key={option.value}
+              id={`${id}-${option.value}`}
+              role="option"
+              aria-selected={option.value === value}
+              data-centered={option.value === value}
+              className="wheel-picker-item"
+              style={{
+                opacity: initialOpacity,
+                transform: `scale(${initialScale})`,
+              }}
+              onClick={event => {
+                if (event.detail === 0 || performance.now() - lastPointerRelease.current > 100) settle(index);
+              }}
+            >
+              {option.label}
+            </div>;
+          })}
         </div>
       </div>
     </div>

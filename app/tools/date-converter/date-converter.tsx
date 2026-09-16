@@ -16,6 +16,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import WheelPicker from '@/components/WheelPicker';
+import RollingNumber from '@/components/RollingNumber';
 import {
   AD_MONTHS,
   BS_MONTHS,
@@ -40,21 +41,33 @@ function numberedOptions(first: number, last: number) {
   return Array.from({ length: last - first + 1 }, (_, index) => ({ value: first + index, label: String(first + index) }));
 }
 
+function getInitialDateState(): { date: CalendarDate; today: { ad: CalendarDate; bs: CalendarDate } } {
+  try {
+    const today = todayInNepal();
+    const nepaliToday = adToBs(today);
+    return { date: nepaliToday, today: { ad: today, bs: nepaliToday } };
+  } catch {
+    const fallbackAd = { year: 2026, month: 9, day: 16 };
+    const fallbackBs = { year: 2083, month: 5, day: 31 };
+    return { date: fallbackBs, today: { ad: fallbackAd, bs: fallbackBs } };
+  }
+}
+
 // The source date is the only date state; derive the other calendar to keep them in sync.
 export default function DateConverter() {
+  const [initialState] = useState(getInitialDateState);
   const [calendar, setCalendar] = useState<CalendarType>('BS');
-  const [date, setDate] = useState<CalendarDate>({ year: 2080, month: 1, day: 1 });
+  const [date, setDate] = useState<CalendarDate>(initialState.date);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
-  const [todayState, setTodayState] = useState<{ ad: CalendarDate; bs: CalendarDate } | null>(null);
+  const [todayState, setTodayState] = useState<{ ad: CalendarDate; bs: CalendarDate }>(initialState.today);
 
-  // Initialize after hydration so server/client time zones cannot cause a mismatch.
+  // Sync today's date on mount if device clock changes
   useEffect(() => {
     try {
       const today = todayInNepal();
       const nepaliToday = adToBs(today);
-      setDate(nepaliToday);
       setTodayState({ ad: today, bs: nepaliToday });
     } catch {
       setError('Today is outside the supported range. Choose another date.');
@@ -68,6 +81,7 @@ export default function DateConverter() {
   const firstMonth = calendar === 'AD' && date.year === MIN_AD_DATE.year ? MIN_AD_DATE.month : 1;
   const lastMonth = calendar === 'AD' && date.year === MAX_AD_DATE.year ? MAX_AD_DATE.month : 12;
   const monthNames = calendar === 'BS' ? BS_MONTHS : AD_MONTHS;
+  const resultMonths = resultCalendar === 'BS' ? BS_MONTHS : AD_MONTHS;
   const months = numberedOptions(firstMonth, lastMonth).map(option => ({ value: option.value, label: monthNames[option.value - 1] }));
   const firstDay = calendar === 'AD' && date.year === MIN_AD_DATE.year && date.month === MIN_AD_DATE.month ? MIN_AD_DATE.day : 1;
   const lastDay = calendar === 'AD' && date.year === MAX_AD_DATE.year && date.month === MAX_AD_DATE.month ? MAX_AD_DATE.day : daysInMonth(calendar, date.year, date.month);
@@ -170,7 +184,7 @@ export default function DateConverter() {
         </div>
 
         {/* 3 Wheel Picker Cards */}
-        <div key={calendar} className="date-pickers-grid">
+        <div className="date-pickers-grid">
           <WheelPicker
             label="Year"
             icon={<Calendar size={14} />}
@@ -220,8 +234,15 @@ export default function DateConverter() {
             <div className="date-result-info">
               <span className="date-result-label">Equivalent {resultCalendar} date</span>
               <div aria-live="polite" aria-atomic="true">
-                <h2 className="date-result-heading">{readableDate(result, resultCalendar)}</h2>
-                <p className="date-result-sub">{weekday(adDate)} · {numericDate(result)} {resultCalendar}</p>
+                <h2 className="date-result-heading" aria-label={readableDate(result, resultCalendar)}>
+                  <span className="date-result-month">{resultMonths[result.month - 1]}</span>{' '}
+                  <RollingNumber value={result.day} />
+                  {', '}
+                  <RollingNumber value={result.year} />
+                </h2>
+                <p className="date-result-sub" aria-label={`${weekday(adDate)} · ${numericDate(result)} ${resultCalendar}`}>
+                  {weekday(adDate)} · <RollingNumber value={result.year} />-<RollingNumber value={result.month} pad={2} />-<RollingNumber value={result.day} pad={2} /> {resultCalendar}
+                </p>
               </div>
             </div>
             <div className="date-result-actions">
