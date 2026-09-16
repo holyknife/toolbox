@@ -4,6 +4,18 @@ export interface ConnectionLocation {
   ip?: string;
   isp?: string;
   city?: string;
+  asn?: number;
+  region?: string;
+}
+
+export interface NetworkInfoResponse {
+  ip: string | null;
+  country: string | null;
+  city: string | null;
+  region: string | null;
+  asn: number | null;
+  isp: string | null;
+  colo: string | null;
 }
 
 const cities: Record<string,string> = { KTM:'Kathmandu', DEL:'New Delhi', BOM:'Mumbai', SIN:'Singapore', HKG:'Hong Kong', NRT:'Tokyo', LHR:'London', FRA:'Frankfurt', LAX:'Los Angeles', SJC:'San Jose', SYD:'Sydney', DFW:'Dallas', CDG:'Paris' };
@@ -40,30 +52,48 @@ export function maskIp(ip: string): string {
   return '•••.•••.•••';
 }
 
-// Lookup at test traffic origin with optional privacy-safe ISP enrichment. Never store IP data.
-export async function getConnectionLocation(signal: AbortSignal): Promise<ConnectionLocation> {
-  const response = await fetch('https://speed.cloudflare.com/cdn-cgi/trace',{cache:'no-store',signal:AbortSignal.any([signal,AbortSignal.timeout(4000)])});
-  if (!response.ok) throw new Error('Location lookup unavailable');
-  const trace = await response.text();
-  const base = parseLocation(trace);
-  const ip = parseTraceIp(trace);
-  let isp: string | undefined;
-  let city: string | undefined;
-
-  try {
-    const geoResponse = await fetch('https://ipwho.is/?fields=connection,city,country',{cache:'no-store',signal:AbortSignal.any([signal,AbortSignal.timeout(2500)])});
-    if (geoResponse.ok) {
-      const geo = await geoResponse.json();
-      if (geo && typeof geo === 'object') {
-        if (typeof geo.city === 'string' && geo.city) city = geo.city;
-        const org = geo.connection?.isp || geo.connection?.org;
-        if (typeof org === 'string' && org) isp = org;
+export function formatNetworkInfo(data: Partial<NetworkInfoResponse>): ConnectionLocation {
+  let country = 'Unavailable';
+  if (data.country) {
+    country = data.country;
+    if (/^[A-Za-z]{2}$/.test(data.country)) {
+      try {
+        country = new Intl.DisplayNames(['en'], { type: 'region' }).of(data.country.toUpperCase()) ?? data.country;
+      } catch {
+        /* Keep reported country code */
       }
     }
-  } catch {
-    // ISP detection failure is non-fatal: route and country are preserved.
   }
 
-  return { ...base, ...(ip ? { ip } : {}), ...(isp ? { isp } : {}), ...(city ? { city } : {}) };
+  let server = 'Unavailable';
+  const colo = data.colo ? data.colo.toUpperCase() : '';
+  if (/^[A-Z]{3}$/.test(colo)) {
+    server = `${cities[colo] ? `${cities[colo]} · ` : 'Cloudflare · '}${colo}`;
+  } else if (data.city) {
+    server = `${data.city} · Cloudflare`;
+  }
+
+  return {
+    country,
+    server,
+    ...(data.ip ? { ip: data.ip } : {}),
+    ...(data.isp ? { isp: data.isp } : {}),
+    ...(data.city ? { city: data.city } : {}),
+    ...(typeof data.asn === 'number' ? { asn: data.asn } : {}),
+    ...(data.region ? { region: data.region } : {}),
+  };
 }
+
+// Lookup via same-origin backend using Cloudflare server-side connection info.
+// Never calls third-party tracking APIs or WebRTC, ensuring compatibility with Brave Shields.
+export async function getConnectionLocation(signal: AbortSignal): Promise<ConnectionLocation> {
+  const response = await fetch('/api/network-info', {
+    cache: 'no-store',
+    signal: AbortSignal.any([signal, AbortSignal.timeout(4000)])
+  });
+  if (!response.ok) throw new Error('Location lookup unavailable');
+  const data = await response.json() as Partial<NetworkInfoResponse>;
+  return formatNetworkInfo(data);
+}
+
 
