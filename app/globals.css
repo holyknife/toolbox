@@ -386,4 +386,28 @@ body,
               color 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Calculators Hub Experience */
+.calculators-hub-page {
+  max-width: 1380px;
+  padding-top: 24px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .calculators-hub-page a.group:hover {
+    box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+  }
+  [data-theme="dark"] .calculators-hub-page a.group:hover {
+    box-shadow: 0 14px 30px -4px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+
 
