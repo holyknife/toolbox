@@ -18,12 +18,59 @@ export interface NetworkInfoResponse {
   colo: string | null;
 }
 
-const cities: Record<string,string> = { KTM:'Kathmandu', DEL:'New Delhi', BOM:'Mumbai', SIN:'Singapore', HKG:'Hong Kong', NRT:'Tokyo', LHR:'London', FRA:'Frankfurt', LAX:'Los Angeles', SJC:'San Jose', SYD:'Sydney', DFW:'Dallas', CDG:'Paris' };
+const cities: Record<string, string> = {
+  KTM: 'Kathmandu',
+  DEL: 'New Delhi',
+  BOM: 'Mumbai',
+  CCU: 'Kolkata',
+  MAA: 'Chennai',
+  BLR: 'Bengaluru',
+  HYD: 'Hyderabad',
+  AMD: 'Ahmedabad',
+  DAC: 'Dhaka',
+  CMB: 'Colombo',
+  KHI: 'Karachi',
+  LHE: 'Lahore',
+  ISB: 'Islamabad',
+  DXB: 'Dubai',
+  DOH: 'Doha',
+  SIN: 'Singapore',
+  BKK: 'Bangkok',
+  KUL: 'Kuala Lumpur',
+  HKG: 'Hong Kong',
+  TPE: 'Taipei',
+  NRT: 'Tokyo',
+  HND: 'Tokyo',
+  ICN: 'Seoul',
+  LHR: 'London',
+  LGW: 'London',
+  FRA: 'Frankfurt',
+  CDG: 'Paris',
+  AMS: 'Amsterdam',
+  MAD: 'Madrid',
+  MXP: 'Milan',
+  ZRH: 'Zurich',
+  LAX: 'Los Angeles',
+  SJC: 'San Jose',
+  SFO: 'San Francisco',
+  SEA: 'Seattle',
+  ORD: 'Chicago',
+  DFW: 'Dallas',
+  ATL: 'Atlanta',
+  IAD: 'Ashburn',
+  EWR: 'Newark',
+  JFK: 'New York',
+  MIA: 'Miami',
+  SYD: 'Sydney',
+  MEL: 'Melbourne',
+};
 
 export function parseLocation(trace: string): ConnectionLocation {
   const fields = Object.fromEntries(trace.split('\n').map(line => line.trim().split('=')));
-  const code = /^[A-Z]{3}$/.test(fields.colo ?? '') ? fields.colo : '';
-  const country = /^[A-Z]{2}$/.test(fields.loc ?? '') ? fields.loc : '';
+  const rawCode = fields.colo?.trim().toUpperCase() ?? '';
+  const code = /^[A-Z0-9]{3,4}$/.test(rawCode) ? rawCode : '';
+  const rawCountry = fields.loc?.trim().toUpperCase() ?? '';
+  const country = /^[A-Z]{2}$/.test(rawCountry) ? rawCountry : '';
   let name = country || 'Unavailable';
   try { if (country) name = new Intl.DisplayNames(['en'],{type:'region'}).of(country) ?? country; } catch { /* Keep the reported country code. */ }
   return {country:name,server:code ? `${cities[code] ? `${cities[code]} · ` : 'Cloudflare · '}${code}` : 'Unavailable'};
@@ -66,8 +113,8 @@ export function formatNetworkInfo(data: Partial<NetworkInfoResponse>): Connectio
   }
 
   let server = 'Unavailable';
-  const colo = data.colo ? data.colo.toUpperCase() : '';
-  if (/^[A-Z]{3}$/.test(colo)) {
+  const colo = data.colo ? data.colo.trim().toUpperCase() : '';
+  if (/^[A-Z0-9]{3,4}$/.test(colo)) {
     server = `${cities[colo] ? `${cities[colo]} · ` : 'Cloudflare · '}${colo}`;
   } else if (data.city) {
     server = `${data.city} · Cloudflare`;
@@ -100,7 +147,28 @@ async function getPrimaryLocation(signal: AbortSignal): Promise<Partial<Connecti
       ip = parseTraceIp(trace);
     }
   } catch {
-    // Blocked by Brave Shields or network error - will fall back to server-side endpoint
+    // Blocked by Brave Shields or network error - will try same-origin or fallback
+  }
+
+  // If cross-origin trace was blocked (e.g. Brave Shields ON), try same-origin /cdn-cgi/trace
+  // which Cloudflare edge serves directly and is never blocked by Shields
+  if ((base.server === 'Unavailable' || !ip) && typeof window !== 'undefined') {
+    try {
+      const sameOriginRes = await fetch('/cdn-cgi/trace', {
+        cache: 'no-store',
+        signal: AbortSignal.any([signal, AbortSignal.timeout(2000)]),
+      });
+      if (sameOriginRes.ok) {
+        const trace = await sameOriginRes.text();
+        if (trace.includes('colo=')) {
+          const sameOriginLoc = parseLocation(trace);
+          if (sameOriginLoc.server !== 'Unavailable') base = sameOriginLoc;
+          if (!ip) ip = parseTraceIp(trace);
+        }
+      }
+    } catch {
+      // Ignored
+    }
   }
 
   let isp: string | undefined;
@@ -174,11 +242,11 @@ export async function getConnectionLocation(signal: AbortSignal): Promise<Connec
 
   const country = (primary.country && primary.country !== 'Unavailable')
     ? primary.country
-    : (fallback?.country ?? 'Unavailable');
+    : (fallback?.country && fallback.country !== 'Unavailable' ? fallback.country : 'Unavailable');
 
   const server = (primary.server && primary.server !== 'Unavailable')
     ? primary.server
-    : (fallback?.server ?? 'Unavailable');
+    : (fallback?.server && fallback.server !== 'Unavailable' ? fallback.server : 'Unavailable');
 
   const ip = primary.ip ?? fallback?.ip;
   const isp = primary.isp ?? fallback?.isp;

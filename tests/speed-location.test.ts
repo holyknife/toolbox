@@ -162,11 +162,41 @@ test('api/network-info route extracts CF-Connecting-IP and cf metadata without t
     colo:null,
   });
 });
+test('api/network-info route extracts colo from cf-ray header and country from cf-ipcountry when request.cf is missing',async()=>{
+  const requestWithRay = new Request('https://example.com/api/network-info',{
+    headers:{
+      'CF-Connecting-IP':'203.0.113.88',
+      'cf-ray':'8c3b2901c89f1a2b-KTM',
+      'cf-ipcountry':'NP',
+      'cf-ipcity':'Kathmandu',
+      'cf-region':'Bagmati',
+    },
+  });
+  const res = await GET(requestWithRay);
+  assert.equal(res.status,200);
+  const data = await res.json();
+  assert.deepEqual(data,{
+    ip:'203.0.113.88',
+    country:'NP',
+    city:'Kathmandu',
+    region:'Bagmati',
+    asn:null,
+    isp:null,
+    colo:'KTM',
+  });
+
+  const formatted = formatNetworkInfo(data);
+  assert.equal(formatted.server,'Kathmandu · KTM');
+  assert.equal(formatted.country,'Nepal');
+  assert.equal(formatted.ip,'203.0.113.88');
+});
+
 test('location lookup fails explicitly when blocked without inventing a location',async()=>{
   const original=globalThis.fetch;
   globalThis.fetch=async()=>new Response(null,{status:403});
   try { await assert.rejects(getConnectionLocation(new AbortController().signal),/unavailable/); }
   finally { globalThis.fetch=original; }
 });
+
 
 
