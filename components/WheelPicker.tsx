@@ -44,11 +44,39 @@ export default function WheelPicker({ label, value, options, onChange, icon }: W
     return Math.max(0, Math.min(latest.current.options.length - 1, index));
   }
 
+  // Measure exact vertical offset of item from the first row to eliminate accumulated subpixel rounding errors.
+  function getRowOffset(index: number): number {
+    if (!track.current) return index * height.current;
+    const children = track.current.children;
+    if (!children.length) return index * height.current;
+    const boundedIdx = bounded(index);
+    const targetIndex = Math.round(boundedIdx);
+    const targetEl = children[targetIndex] as HTMLElement | undefined;
+    const firstEl = children[0] as HTMLElement | undefined;
+    if (targetEl && firstEl) {
+      const exactOffset = targetEl.offsetTop - firstEl.offsetTop;
+      if (Math.abs(boundedIdx - targetIndex) > 0.001 && children.length > 1) {
+        const lower = Math.floor(boundedIdx);
+        const upper = Math.min(children.length - 1, Math.ceil(boundedIdx));
+        const lowerEl = children[lower] as HTMLElement | undefined;
+        const upperEl = children[upper] as HTMLElement | undefined;
+        if (lowerEl && upperEl && lower !== upper) {
+          const lowerOffset = lowerEl.offsetTop - firstEl.offsetTop;
+          const upperOffset = upperEl.offsetTop - firstEl.offsetTop;
+          return lowerOffset + (boundedIdx - lower) * (upperOffset - lowerOffset);
+        }
+      }
+      return exactOffset;
+    }
+    return boundedIdx * height.current;
+  }
+
   // Only transforms/opacity change per frame. Layout is measured separately on resize.
   function paint(nextPosition: number) {
     position.current = bounded(nextPosition);
     if (!track.current || !viewport.current) return;
-    track.current.style.transform = `translate3d(0, ${-position.current * height.current}px, 0)`;
+    const offset = getRowOffset(position.current);
+    track.current.style.transform = `translate3d(0, ${-offset}px, 0)`;
     const nearest = Math.round(position.current);
     for (const [index, row] of Array.from(track.current.children).entries()) {
       const element = row as HTMLElement;
@@ -125,7 +153,14 @@ export default function WheelPicker({ label, value, options, onChange, icon }: W
       if (media.matches) { stop(); commit(position.current); }
     }
     function measure() {
-      height.current = (track.current?.firstElementChild as HTMLElement | null)?.offsetHeight || 44;
+      if (track.current && track.current.children.length > 1) {
+        const first = track.current.firstElementChild as HTMLElement;
+        const last = track.current.lastElementChild as HTMLElement;
+        const count = track.current.children.length;
+        height.current = (last.offsetTop - first.offsetTop) / (count - 1);
+      } else {
+        height.current = (track.current?.firstElementChild as HTMLElement | null)?.offsetHeight || 44;
+      }
       paint(position.current);
     }
     updateMotion();
