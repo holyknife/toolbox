@@ -21,6 +21,14 @@ export default function CalculatorHeader({ calculator }: CalculatorHeaderProps) 
         <Link href="/tools/calculators" className="hover:text-text transition-colors">
           Calculators
         </Link>
+        {calculator.scope === 'nepal' && (
+          <>
+            <ChevronRight size={12} className="opacity-40" />
+            <Link href="/tools/calculators/nepal" className="hover:text-text transition-colors">
+              Nepal
+            </Link>
+          </>
+        )}
         <ChevronRight size={12} className="opacity-40" />
         <span className="font-semibold text-text truncate">{calculator.shortTitle}</span>
       </nav>
@@ -51,11 +59,11 @@ export default function CalculatorHeader({ calculator }: CalculatorHeaderProps) 
         </div>
 
         <Link
-          href="/tools/calculators"
+          href={calculator.scope === 'nepal' ? '/tools/calculators/nepal' : '/tools/calculators'}
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-dim hover:text-accent transition-colors self-start sm:self-center flex-shrink-0"
         >
           <ArrowLeft size={14} />
-          <span>All calculators</span>
+          <span>{calculator.scope === 'nepal' ? 'Nepal calculators' : 'All calculators'}</span>
         </Link>
       </div>
     </div>
