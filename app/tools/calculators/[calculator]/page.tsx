@@ -1,27 +1,47 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Calculator } from 'lucide-react';
-import { calculators } from '../calculators-registry';
-import CalculatorSearch from '../calculator-search';
-import CalculatorWorkspace from '../calculator-workspace';
+import { calculators, getCalculatorBySlug } from '../registry/calculators-registry';
+import CalculatorViewDispatcher from '../components/calculator-view-dispatcher';
 
-// Prebuild each registered calculator and return a real 404 for unknown slugs.
-export function generateStaticParams() { return calculators.map(item => ({calculator:item.slug})); }
-export async function generateMetadata({ params }: { params: Promise<{ calculator: string }> }): Promise<Metadata> {
-  const { calculator } = await params;
-  const item = calculators.find(item => item.slug === calculator);
-  return { title:item?.name || 'Calculator not found',description:item?.description };
+// Prebuild all 26 official calculators plus legacy aliases
+export function generateStaticParams() {
+  const legacySlugs = ['basic', 'tax', 'gpa', 'grade', 'age'];
+  const allSlugs = Array.from(
+    new Set([...calculators.map((c) => c.slug), ...legacySlugs])
+  );
+  return allSlugs.map((slug) => ({ calculator: slug }));
 }
-// Next.js 16 supplies route parameters asynchronously, including prebuilt routes.
-export default async function Page({ params }: { params: Promise<{ calculator: string }> }) {
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ calculator: string }>;
+}): Promise<Metadata> {
   const { calculator } = await params;
-  const item = calculators.find(item => item.slug === calculator);
-  if (!item) notFound();
-  return <div className="page">
-    <Link href="/tools/calculators" className="back-link"><ArrowLeft size={14}/>All calculators</Link>
-    <div className="tool-heading"><span className="tool-icon"><Calculator size={28}/></span><div><h1>{item.name}</h1><p>{item.description}</p></div></div>
-    <CalculatorSearch compact/>
-    <CalculatorWorkspace slug={item.slug}/>
-  </div>;
+  const item = getCalculatorBySlug(calculator);
+  return {
+    title: item ? `${item.title} | Toolbox` : 'Calculator | Toolbox',
+    description:
+      item?.description ||
+      'Clean Nepal-first and everyday calculators for study, money, dates, and productivity.',
+  };
+}
+
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ calculator: string }>;
+}) {
+  const { calculator } = await params;
+  const item = getCalculatorBySlug(calculator);
+
+  if (!item && !['basic', 'tax', 'gpa', 'grade', 'age'].includes(calculator)) {
+    notFound();
+  }
+
+  return (
+    <div className="page calculators-detail-page py-4 sm:py-6 px-3 sm:px-6 max-w-7xl mx-auto">
+      <CalculatorViewDispatcher slug={calculator} />
+    </div>
+  );
 }

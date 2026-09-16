@@ -3,46 +3,38 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import {
-  Calculator as CalcIcon,
   Search,
   X,
-  Star,
-  ArrowRight,
   ChevronRight,
   ChevronDown,
-  RotateCcw,
+  ArrowRight,
+  MapPin,
 } from 'lucide-react';
-import { calculators, type Calculator } from './calculators-registry';
-import CalculatorCard, { calculatorMetaMap } from './calculator-card';
+import {
+  calculators,
+  CALCULATOR_CATEGORIES,
+  type CalculatorCategory,
+  type CalculatorItem,
+} from './registry/calculators-registry';
+import CalculatorIcon from './components/calculator-icon';
 
-const popularSlugs = ['loan-emi', 'discount', 'gpa'];
-
-const categoryTabs = [
-  { id: 'All', label: 'All' },
-  { id: 'Money', label: 'Money' },
-  { id: 'Date & Time', label: 'Date & Time' },
-  { id: 'Study', label: 'Study' },
-  { id: 'Health', label: 'Health' },
-  { id: 'Design', label: 'Design' },
-] as const;
-
-type SortOption = 'simple' | 'alpha' | 'popular';
+type SortOption = 'relevant' | 'alpha' | 'category';
 
 export default function CalculatorsHub() {
   const [query, setQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [sortOption, setSortOption] = useState<SortOption>('simple');
+  const [selectedCategory, setSelectedCategory] = useState<CalculatorCategory>('All');
+  const [sortOption, setSortOption] = useState<SortOption>('relevant');
   const [isMac, setIsMac] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Detect platform for keyboard shortcut display (⌘K vs Ctrl K)
+  // Platform detection for ⌘K vs Ctrl K
   useEffect(() => {
     if (typeof window !== 'undefined' && /mac/i.test(navigator.userAgent)) {
       setIsMac(true);
     }
   }, []);
 
-  // Global Ctrl+K / Cmd+K listener to focus search input
+  // Global keyboard shortcut (⌘K / Ctrl+K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -57,277 +49,264 @@ export default function CalculatorsHub() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Compute category counts
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      All: calculators.length,
-      Money: 0,
-      'Date & Time': 0,
-      Study: 0,
-      Health: 0,
-      Design: 0,
-    };
-
-    for (const c of calculators) {
-      const meta = calculatorMetaMap[c.slug];
-      if (meta?.filterCategory && counts[meta.filterCategory] !== undefined) {
-        counts[meta.filterCategory]++;
-      }
-    }
-    return counts;
+  // Featured 4 calculators for "Most used" row
+  const featuredCalculators = useMemo(() => {
+    const slugs = ['see-gpa', 'see-gpa-planner', 'neb-class-12-planner', 'loan-emi'];
+    return slugs
+      .map((s) => calculators.find((c) => c.slug === s))
+      .filter((c): c is CalculatorItem => Boolean(c));
   }, []);
 
-  // Filtered calculators
-  const matches = useMemo(() => {
-    const q = query.trim().toLowerCase();
+  // Filtered & sorted calculators
+  const filteredCalculators = useMemo(() => {
+    let list = [...calculators];
 
-    return calculators.filter(calc => {
-      const meta = calculatorMetaMap[calc.slug];
-      const matchesCat =
-        selectedCategory === 'All' ||
-        meta?.filterCategory === selectedCategory;
-
-      if (!matchesCat) return false;
-
-      if (!q) return true;
-
-      const searchableText = `${calc.name} ${calc.description} ${calc.category} ${meta?.tag ?? ''} ${meta?.filterCategory ?? ''} ${calc.slug}`.toLowerCase();
-      return searchableText.includes(q);
-    });
-  }, [query, selectedCategory]);
-
-  // Sorted calculators
-  const sortedMatches = useMemo(() => {
-    const list = [...matches];
-    if (sortOption === 'alpha') {
-      return list.sort((a, b) => a.name.localeCompare(b.name));
+    // Category filter
+    if (selectedCategory !== 'All') {
+      list = list.filter((c) => c.category === selectedCategory);
     }
-    if (sortOption === 'popular') {
-      return list.sort((a, b) => {
-        const aPop = popularSlugs.indexOf(a.slug);
-        const bPop = popularSlugs.indexOf(b.slug);
-        if (aPop !== -1 && bPop !== -1) return aPop - bPop;
-        if (aPop !== -1) return -1;
-        if (bPop !== -1) return 1;
-        return 0;
+
+    // Search query
+    const q = query.trim().toLowerCase();
+    if (q) {
+      list = list.filter((c) => {
+        return (
+          c.title.toLowerCase().includes(q) ||
+          c.shortTitle.toLowerCase().includes(q) ||
+          c.description.toLowerCase().includes(q) ||
+          c.category.toLowerCase().includes(q) ||
+          c.keywords.some((k) => k.toLowerCase().includes(q))
+        );
       });
     }
-    return list; // 'simple' maintains curated order from calculators-registry
-  }, [matches, sortOption]);
 
-  // Featured popular calculators matching current search
-  const popularCalculators = useMemo(() => {
-    return popularSlugs
-      .map(slug => calculators.find(c => c.slug === slug))
-      .filter((c): c is Calculator => Boolean(c))
-      .filter(c => matches.some(m => m.slug === c.slug));
-  }, [matches]);
-
-  const scrollToAll = () => {
-    const el = document.getElementById('all-calculators');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+    // Sorting
+    if (sortOption === 'alpha') {
+      list.sort((a, b) => a.title.localeCompare(b.title));
+    } else if (sortOption === 'category') {
+      list.sort((a, b) => a.category.localeCompare(b.category) || a.title.localeCompare(b.title));
     }
+
+    return list;
+  }, [selectedCategory, query, sortOption]);
+
+  const clearSearch = () => {
+    setQuery('');
+    searchInputRef.current?.focus();
   };
 
   return (
-    <div className="w-full max-w-[1360px] mx-auto pb-16">
-      {/* Breadcrumbs */}
-      <nav className="flex items-center gap-2 text-[13px] text-text-dim mb-6" aria-label="Breadcrumb">
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
+      {/* Top Breadcrumb */}
+      <nav className="flex items-center gap-2 text-[12px] text-text-dim" aria-label="Breadcrumb">
         <Link href="/" className="hover:text-text transition-colors">
           Workspace
         </Link>
-        <ChevronRight size={13} className="opacity-50" />
+        <ChevronRight size={12} className="opacity-40" />
         <span className="font-semibold text-text">Calculators</span>
       </nav>
 
-      {/* Header Row: Title & Search */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200/70 dark:border-blue-800/50 flex items-center justify-center flex-shrink-0 shadow-sm">
-            <CalcIcon size={28} strokeWidth={2} />
-          </div>
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-text m-0">
-              Calculators
-            </h1>
-            <p className="text-[13px] sm:text-[14px] text-text-dim mt-1 m-0">
-              Find the right calculator for everyday, money, study, health, and dates.
-            </p>
-          </div>
+      {/* Header with Title and Counter */}
+      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2">
+        <div>
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-text m-0">
+            Calculators
+          </h1>
+          <p className="text-sm sm:text-base text-text-dim m-0 mt-1">
+            Nepal-first calculators for study, money, dates, and everyday use.
+          </p>
         </div>
-
-        {/* Search Bar with Ctrl+K shortcut */}
-        <div className="relative w-full md:w-80 lg:w-96 flex-shrink-0">
-          <label htmlFor="calculator-search" className="sr-only">
-            Search calculators
-          </label>
-          <div className="relative flex items-center">
-            <Search
-              size={18}
-              className="absolute left-3.5 text-text-dim pointer-events-none transition-colors"
-            />
-            <input
-              ref={searchInputRef}
-              id="calculator-search"
-              type="search"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Search calculators... (EMI, GPA, age)"
-              className="w-full pl-10 pr-20 py-2.5 rounded-xl border border-border bg-panel text-[13px] text-text placeholder:text-text-dim/80 outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15 hover:border-border/80 shadow-sm"
-            />
-            <div className="absolute right-2.5 flex items-center gap-1">
-              {query ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuery('');
-                    searchInputRef.current?.focus();
-                  }}
-                  className="w-6 h-6 rounded-md flex items-center justify-center text-text-dim hover:text-text hover:bg-muted transition-colors"
-                  aria-label="Clear search"
-                >
-                  <X size={14} />
-                </button>
-              ) : (
-                <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[11px] font-medium text-text-dim bg-muted border border-border rounded pointer-events-none select-none">
-                  {isMac ? '⌘K' : 'Ctrl K'}
-                </kbd>
-              )}
-            </div>
-          </div>
+        <div className="text-xs font-semibold text-text-dim self-start sm:self-auto bg-muted/50 px-2.5 py-1 rounded-full border border-border/60">
+          {calculators.length} calculators
         </div>
       </div>
 
-      {/* Category Filter Pills & Result Summary */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4 border-y border-border/70 mb-8">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none" role="tablist" aria-label="Calculator Categories">
-          {categoryTabs.map(tab => {
-            const isSelected = selectedCategory === tab.id;
-            const count = categoryCounts[tab.id] ?? 0;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={isSelected}
-                onClick={() => setSelectedCategory(tab.id)}
-                className={`px-3.5 py-1.5 rounded-full text-[12px] font-medium transition-all duration-200 flex-shrink-0 flex items-center gap-1.5 select-none ${
-                  isSelected
-                    ? 'bg-accent text-accent-contrast shadow-sm scale-[1.02]'
-                    : 'bg-panel border border-border text-text hover:bg-muted hover:border-border/90'
-                }`}
-              >
-                <span>{tab.label}</span>
-                <span className={`text-[11px] opacity-80 ${isSelected ? 'text-accent-contrast' : 'text-text-dim'}`}>
-                  ({count})
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="text-[12px] text-text-dim whitespace-nowrap">
-          <span>{matches.length} calculators</span>
-          <span className="mx-1.5">•</span>
-          <span>ordered from simple to more involved</span>
-        </div>
-      </div>
-
-      {/* Popular Calculators Section */}
-      {popularCalculators.length > 0 && (
-        <section className="mb-12" aria-labelledby="popular-calculators-title">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2.5">
-              <Star size={20} className="text-amber-500 fill-amber-400" />
-              <div>
-                <h2 id="popular-calculators-title" className="text-[17px] font-bold text-text tracking-tight m-0">
-                  Popular calculators
-                </h2>
-                <p className="text-[12px] text-text-dim m-0">
-                  Most useful calculators, ready when you need them.
-                </p>
-              </div>
-            </div>
-
+      {/* Search Bar */}
+      <div className="relative">
+        <Search
+          size={18}
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none"
+        />
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search NEB GPA, EMI, VAT, age..."
+          className="w-full pl-11 pr-24 py-3 sm:py-3.5 rounded-2xl bg-card border border-border/80 text-text text-sm sm:text-base placeholder:text-text-dim/60 shadow-xs focus:outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+        />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+          {query && (
             <button
               type="button"
-              onClick={scrollToAll}
-              className="text-[12px] font-semibold text-accent hover:underline flex items-center gap-1 transition-all group"
+              onClick={clearSearch}
+              className="p-1 rounded-md text-text-dim hover:text-text hover:bg-muted transition-colors"
+              aria-label="Clear search"
             >
-              <span>See all calculators</span>
-              <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+              <X size={15} />
+            </button>
+          )}
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 px-2 py-1 text-[11px] font-mono font-medium text-text-dim bg-muted/80 rounded-md border border-border">
+            {isMac ? '⌘K' : 'Ctrl K'}
+          </kbd>
+        </div>
+      </div>
+
+      {/* Category Filter Pills */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+        {CALCULATOR_CATEGORIES.map((cat) => {
+          const isActive = selectedCategory === cat;
+          return (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                isActive
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-card text-text-dim hover:text-text hover:bg-muted/60 border border-border/70'
+              }`}
+            >
+              {cat}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* "Most used" Row (Visible when not searching and on 'All' category) */}
+      {!query && selectedCategory === 'All' && (
+        <section className="space-y-3 pt-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-text m-0">Most used</h2>
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById('all-calculators-section');
+                el?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              <span>See all</span>
+              <ArrowRight size={13} />
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {popularCalculators.map(calc => (
-              <CalculatorCard key={calc.slug} calculator={calc} featured />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+            {featuredCalculators.map((c) => (
+              <Link
+                key={c.slug}
+                href={`/tools/calculators/${c.slug}`}
+                className="group relative p-4 rounded-2xl bg-card border border-border/80 hover:border-blue-500/60 dark:hover:border-blue-500/40 hover:shadow-sm transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.badgeClass} ${c.iconClass}`}
+                    >
+                      <CalculatorIcon name={c.iconName} size={20} />
+                    </div>
+                    <ChevronRight
+                      size={15}
+                      className="text-text-dim/50 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all mt-1"
+                    />
+                  </div>
+
+                  <div className="inline-block text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-1">
+                    {c.category === 'Study & NEB' ? 'NEB' : c.category}
+                  </div>
+
+                  <h3 className="text-sm font-bold text-text group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors m-0 mb-1 leading-snug">
+                    {c.title}
+                  </h3>
+
+                  <p className="text-xs text-text-dim line-clamp-2 m-0 leading-relaxed">
+                    {c.description}
+                  </p>
+                </div>
+              </Link>
             ))}
           </div>
         </section>
       )}
 
-      {/* All Calculators Section */}
-      <section id="all-calculators" aria-labelledby="all-calculators-title">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-          <div>
-            <h2 id="all-calculators-title" className="text-[18px] font-bold text-text tracking-tight m-0">
-              All calculators
-            </h2>
-            <p className="text-[12px] text-text-dim mt-0.5 m-0">
-              Explore our complete collection of {calculators.length} calculators.
-            </p>
-          </div>
+      {/* "All calculators" Section */}
+      <section id="all-calculators-section" className="space-y-4 pt-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <h2 className="text-base font-bold text-text m-0">
+            {query ? `Search Results (${filteredCalculators.length})` : 'All calculators'}
+          </h2>
 
-          {/* Sort Dropdown */}
-          <div className="relative inline-flex items-center">
-            <label htmlFor="calculator-sort" className="sr-only">Sort calculators</label>
-            <div className="flex items-center gap-2 bg-panel border border-border rounded-lg px-3 py-1.5 text-[12px] text-text hover:border-border/90 shadow-sm cursor-pointer">
-              <span className="text-text-dim">Sort:</span>
-              <select
-                id="calculator-sort"
-                value={sortOption}
-                onChange={e => setSortOption(e.target.value as SortOption)}
-                className="bg-transparent border-0 text-text font-medium outline-none cursor-pointer pr-4 appearance-none"
-              >
-                <option value="simple" className="bg-panel text-text">Simple to advanced</option>
-                <option value="alpha" className="bg-panel text-text">Alphabetical (A-Z)</option>
-                <option value="popular" className="bg-panel text-text">Popular first</option>
-              </select>
-              <ChevronDown size={14} className="text-text-dim pointer-events-none -ml-3" />
-            </div>
+          <div className="flex items-center gap-2 text-xs text-text-dim self-end sm:self-auto">
+            <span>Sort by:</span>
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value as SortOption)}
+              className="bg-card border border-border rounded-lg px-2.5 py-1 text-xs text-text font-medium focus:outline-hidden"
+            >
+              <option value="relevant">Most relevant</option>
+              <option value="alpha">Alphabetical (A–Z)</option>
+              <option value="category">Category</option>
+            </select>
           </div>
         </div>
 
-        {/* Grid of All Matching Calculators */}
-        {sortedMatches.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-            {sortedMatches.map(calc => (
-              <CalculatorCard key={calc.slug} calculator={calc} />
-            ))}
-          </div>
-        ) : (
-          <div className="py-16 text-center rounded-2xl border border-dashed border-border bg-panel/50">
-            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto text-text-dim mb-3">
-              <Search size={22} />
-            </div>
-            <h3 className="text-base font-semibold text-text mb-1">No calculators match your search</h3>
-            <p className="text-sm text-text-dim max-w-sm mx-auto mb-4">
-              Try searching by other keywords (e.g. loan, percentage, tax, age, bmi) or clear the search filter.
+        {filteredCalculators.length === 0 ? (
+          <div className="text-center py-12 rounded-2xl bg-card border border-dashed border-border space-y-3">
+            <p className="text-sm text-text-dim m-0">
+              No calculators found matching &ldquo;{query}&rdquo;
             </p>
             <button
               type="button"
-              onClick={() => {
-                setQuery('');
-                setSelectedCategory('All');
-                searchInputRef.current?.focus();
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-accent text-accent-contrast hover:filter hover:brightness-95 transition-all"
+              onClick={clearSearch}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white"
             >
-              <RotateCcw size={14} />
-              <span>Reset search & filters</span>
+              Clear search query
             </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {filteredCalculators.map((c) => (
+              <Link
+                key={c.slug}
+                href={`/tools/calculators/${c.slug}`}
+                className="group p-3.5 rounded-2xl bg-card border border-border/80 hover:border-border hover:bg-muted/20 hover:shadow-xs transition-all flex items-center justify-between gap-3"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${c.badgeClass} ${c.iconClass}`}
+                  >
+                    <CalculatorIcon name={c.iconName} size={19} />
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                        {c.category}
+                      </span>
+                      {c.nepalSpecific && (
+                        <span className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded text-[9px] font-semibold bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400">
+                          <MapPin size={8} />
+                          <span>Nepal</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="text-xs sm:text-sm font-bold text-text group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors m-0 truncate">
+                      {c.title}
+                    </h3>
+
+                    <p className="text-[11px] text-text-dim truncate m-0 mt-0.5">
+                      {c.description}
+                    </p>
+                  </div>
+                </div>
+
+                <ChevronRight
+                  size={15}
+                  className="text-text-dim/40 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0"
+                />
+              </Link>
+            ))}
           </div>
         )}
       </section>
