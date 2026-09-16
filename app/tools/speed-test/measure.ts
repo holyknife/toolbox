@@ -8,11 +8,16 @@ export interface Measurement {
   pingMean?: number; jitter?: number; timing?: 'resource' | 'warmed-http';
   downloadLatency?: number; uploadLatency?: number;
   downloadRange?: SpeedRange; uploadRange?: SpeedRange;
-  method?: 'sustained-v2' | 'parallel-v3';
+  method?: 'sustained-v2' | 'parallel-v3' | 'parallel-quick-v4';
 }
 export interface Outcome extends Partial<Measurement> { errors: Partial<Record<Phase,string>> }
 export interface Settings { rounds: number; roundMs: number; warmupMs: number; streams: number }
 const defaults: Settings = {rounds:3,roundMs:4000,warmupMs:2000,streams:4};
+export type TestMode = 'quick' | 'thorough';
+export const testSettings: Record<TestMode, Settings> = {
+  quick: {rounds:3,roundMs:2000,warmupMs:1000,streams:4},
+  thorough: defaults,
+};
 
 // Median limits the influence of an isolated burst or unusually slow probe.
 export function median(values: number[]) {
@@ -45,10 +50,10 @@ function delay(signal: AbortSignal, milliseconds: number): Promise<void> {
 }
 
 // Discard the first request, then retain ten separate samples (not their minimum).
-export async function measureLatency(signal: AbortSignal) {
+export async function measureLatency(signal: AbortSignal, count = 10) {
   await pingRequest(signal);
   const samples: Awaited<ReturnType<typeof pingRequest>>[] = [];
-  for (let index = 0; index < 10; index++) samples.push(await pingRequest(signal));
+  for (let index = 0; index < count; index++) samples.push(await pingRequest(signal));
   const points = samples.map(sample => sample.milliseconds);
   return {ping:median(points),pingMean:points.reduce((sum,value) => sum+value,0)/points.length,
     jitter:jitter(points),timing:samples.every(sample => sample.timing === 'resource') ? 'resource' as const : 'warmed-http' as const};
@@ -106,11 +111,12 @@ async function loadedLatency(signal: AbortSignal, points: number[]) {
 }
 
 export async function measureDirection(direction: 'download' | 'upload', signal: AbortSignal,
-  update: (value: number) => void, settings: Settings = defaults, warming: () => void = () => {}) {
+  update: (value: number) => void, settings: Settings = defaults, warming: () => void = () => {}, progress: (fraction: number) => void = () => {}) {
   const sizes = Array.from({length:settings.streams},() => 64000);
   warming();
   // All streams warm for at least two seconds; no warm-up bytes enter results.
   await parallelWindow(direction,signal,sizes,settings.warmupMs,() => {});
+  progress(1 / (settings.rounds + 1));
   const points: number[] = [];
   const probes = new AbortController();
   const abort = () => probes.abort(signal.reason);
@@ -118,7 +124,10 @@ export async function measureDirection(direction: 'download' | 'upload', signal:
   const latencyTask = loadedLatency(probes.signal,points);
   try {
     const rounds: number[] = [];
-    for (let round = 0; round < settings.rounds; round++) rounds.push(await parallelWindow(direction,signal,sizes,settings.roundMs,update));
+    for (let round = 0; round < settings.rounds; round++) {
+      rounds.push(await parallelWindow(direction,signal,sizes,settings.roundMs,update));
+      progress((round + 2) / (settings.rounds + 1));
+    }
     const result = summarizeRounds(rounds);
     update(result.speed);
     return {...result,loadedLatency:points.length ? median(points) : undefined};
@@ -133,21 +142,25 @@ export async function measureUpload(signal: AbortSignal, update: (value: number)
 
 // Retry each phase once, preserving completed phases and continuing after failures.
 export async function runSpeedTest(signal: AbortSignal, phase: (phase: Phase) => void,
-  update: (value: number) => void, complete: (key: Phase,value: number) => void,
-  status: (phase: Phase,state: StageState | 'warming') => void = () => {}, visibility?: Visibility): Promise<Outcome> {
-  const result: Outcome = {method:'parallel-v3',errors:{}};
+  update: (value: number) => void, complete: (key: Phase,value: number, metrics: Partial<Measurement>) => void,
+  status: (phase: Phase,state: StageState | 'warming') => void = () => {}, visibility?: Visibility,
+  mode: TestMode = 'thorough', progress: (value: number) => void = () => {}): Promise<Outcome> {
+  const result: Outcome = {method:mode === 'quick' ? 'parallel-quick-v4' : 'parallel-v3',errors:{}};
   for (const key of ['ping','download','upload'] as const) {
     signal.throwIfAborted(); phase(key);
     try {
-      if (key === 'ping') Object.assign(result,await resilientStage(signal,measureLatency,state => status(key,state),visibility));
+      if (key === 'ping') {
+        Object.assign(result,await resilientStage(signal,current => measureLatency(current,mode === 'quick' ? 6 : 10),state => status(key,state),visibility));
+        progress(10);
+      }
       else {
-        const measured = await resilientStage(signal,current => measureDirection(key,current,update,defaults,() => status(key,'warming')),
+        const measured = await resilientStage(signal,current => measureDirection(key,current,update,testSettings[mode],() => status(key,'warming'),fraction => progress((key === 'download' ? 10 : 55) + fraction * 45)),
           state => status(key,state),visibility);
         result[key] = measured.speed;
         result[`${key}Range`] = measured.range;
         result[`${key}Latency`] = measured.loadedLatency;
       }
-      complete(key,result[key]!);
+      complete(key,result[key]!,result);
     } catch (error) {
       signal.throwIfAborted();
       result.errors[key] = error instanceof Error ? error.message : 'This phase could not complete.';

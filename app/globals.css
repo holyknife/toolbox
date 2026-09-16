@@ -161,3 +161,54 @@ button:disabled:hover,button:disabled:active{filter:none;scale:1}
 @media(prefers-reduced-motion:reduce) {
   .directory-card .feature-art,.directory-card .card-arrow { translate:none!important; rotate:none!important; }
 }
+
+/* Speed test studio: scoped to preserve other tools and the shared theme. */
+.speed-page { --dial-start:#6475e5; --dial-end:#559bf3; --dial-halo:color-mix(in srgb,var(--dial-end) 10%,transparent); }
+.speed-page .is-upload { --dial-start:#8170dc; --dial-end:#b18aea; }
+.speed-page .speed-layout { grid-template-columns:minmax(0,1fr) 210px; gap:22px; }
+.speed-studio { padding:24px; background:linear-gradient(135deg,var(--panel),color-mix(in srgb,var(--muted) 35%,var(--panel))); }
+.studio-top { display:flex; align-items:center; justify-content:space-between; gap:15px; }
+.studio-status { display:flex; align-items:center; gap:12px; }
+.studio-status strong { font-size:12px; font-weight:600; }
+.studio-status p { font-size:11px; color:var(--text-dim); margin:4px 0 0; }
+.connection-dot { width:7px; height:7px; flex-shrink:0; border-radius:50%; background:var(--speed-good); box-shadow:0 0 0 6px color-mix(in srgb,var(--speed-good) 10%,transparent); }
+.connection-dot.is-running { animation:connection-pulse 1.8s ease-in-out infinite; }
+@keyframes connection-pulse { 50% { box-shadow:0 0 0 9px color-mix(in srgb,var(--speed-good) 3%,transparent); } }
+.provider { display:flex; gap:7px; align-items:center; font-size:10px; color:var(--text-dim); }
+.speed-mode { display:flex; width:fit-content; gap:3px; padding:4px; margin:22px 0 0; background:var(--bg); border:1px solid var(--border); border-radius:10px; }
+.speed-mode button,.chart-switch button { border:0; background:transparent; color:var(--text-dim); padding:8px 12px; border-radius:7px; font-size:11px; }
+.speed-mode button span { margin-left:7px; opacity:.8; font-size:10px; }
+.speed-mode button[aria-pressed="true"],.chart-switch button[aria-pressed="true"] { color:var(--accent); background:var(--accent-soft); }
+.speed-mode button:disabled { cursor:default; }
+.speed-visuals { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.05fr); gap:20px; align-items:center; padding:16px 0 22px; }
+.speed-dial { position:relative; width:100%; max-width:380px; margin:auto; }
+.speed-dial>svg { display:block; width:100%; overflow:visible; }
+.dial-readout { position:absolute; top:34%; left:20%; right:20%; display:flex; align-items:center; flex-direction:column; text-align:center; }
+.dial-readout>svg { color:var(--dial-end); margin-bottom:9px; }
+.dial-readout strong { font-size:clamp(30px,3.7vw,54px); line-height:1.1; letter-spacing:-2px; font-weight:650; font-variant-numeric:tabular-nums; }
+.dial-readout>span { font-size:12px; margin-top:7px; }
+.dial-readout small { font-size:10px; line-height:1.5; color:var(--dial-end); margin-top:12px; }
+.performance-panel { min-width:0; border:1px solid var(--border); border-radius:12px; background:color-mix(in srgb,var(--bg) 35%,transparent); padding:16px; }
+.live-speed-chart { margin:0; }
+.live-speed-chart figcaption { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:11px; }
+.live-speed-chart figcaption strong { font-weight:500; }.live-speed-chart figcaption>span { font-size:10px; color:var(--text-dim); background:var(--bg); padding:5px 8px; border-radius:5px; }
+.live-speed-chart svg { width:100%; display:block; margin-top:10px; }
+.live-speed-chart p { color:var(--dial-end); text-align:right; font-size:10px; margin:0 0 14px; font-variant-numeric:tabular-nums; }
+.connection-locations { border-top:1px solid var(--border); padding-top:15px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.connection-locations>div { display:flex; gap:8px; align-items:center; min-width:0; color:var(--text-dim); }
+.connection-locations>div+div { border-left:1px solid var(--border); padding-left:12px; }
+.connection-locations p { margin:0; min-width:0; }.connection-locations span { display:block; font-size:9px; margin-bottom:5px; }.connection-locations strong { display:block; font-size:10px; font-weight:500; color:var(--text); overflow-wrap:anywhere; }
+.location-hint { font-size:9px; color:var(--text-dim); margin:12px 0 0; line-height:1.5; }
+.chart-switch { display:flex; gap:3px; margin-bottom:10px; }
+.speed-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+.metric-tile { border:1px solid var(--border); border-radius:11px; padding:14px; background:linear-gradient(140deg,var(--panel),var(--muted)); }
+.metric-active { border-color:var(--dial-end); box-shadow:0 0 20px color-mix(in srgb,var(--dial-end) 8%,transparent); }.metric-upload.metric-active { border-color:#a68bdd; }
+.metric-label { display:flex; align-items:center; gap:8px; font-size:10px; color:var(--text-dim); }.metric-label svg { color:var(--dial-end); }.metric-upload svg { color:#a68bdd; }.metric-ping svg { color:var(--speed-good); }
+.metric-tile>strong { display:block; margin:13px 0 3px; font-size:clamp(17px,2vw,24px); font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:-.5px; }.metric-tile>small { font-size:10px; color:var(--text-dim); }
+.test-controls { margin-top:19px; padding:15px; display:flex; align-items:center; gap:20px; background:var(--muted); border:1px solid var(--border); border-radius:10px; }.test-controls>div { flex:1; min-width:0; }.test-controls>div>span { font-size:11px; }.test-controls small { display:block; font-size:9px; color:var(--text-dim); margin-top:8px; }.test-progress { height:7px; border-radius:10px; background:var(--border); overflow:hidden; margin-top:10px; }.test-progress>span { display:block; height:100%; background:linear-gradient(90deg,var(--dial-start),var(--dial-end)); border-radius:10px; transition:width .6s cubic-bezier(.22,1,.36,1); }
+.test-controls button { flex-shrink:0; font-size:12px; }.stop-test { color:var(--text); border:1px solid var(--border); padding:12px 15px; border-radius:8px; background:var(--panel); }.speed-studio .test-note { font-size:10px; line-height:1.8; }
+.measurement-details { margin-top:20px; font-size:12px; }.measurement-details summary { cursor:pointer; color:var(--text-dim); }.measurement-details dl { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:18px; }.measurement-details dt { color:var(--text-dim); font-size:10px; }.measurement-details dd { margin:5px 0 0; font-size:11px; }.measurement-details p { color:var(--text-dim); font-size:10px; line-height:1.7; margin-top:16px; }
+.speed-page .info-panel { padding-top:8px; }.speed-page .info-item { padding:20px 16px; border:1px solid var(--border); border-radius:12px; background:var(--panel); margin-bottom:12px; }.speed-page .info-item h3 { gap:10px; }.speed-page .info-item h3 svg { color:var(--dial-end); }.speed-page .info-item p { font-size:11px; }.speed-page .server-note { font-size:10px; line-height:1.8; border:0; padding:8px 4px; }
+@media(max-width:1250px) { .speed-page .speed-layout { grid-template-columns:1fr; }.speed-page .info-panel { display:none; } }
+@media(max-width:850px) { .speed-visuals { grid-template-columns:1fr; }.speed-dial { max-width:320px; }.dial-readout strong { font-size:47px; }.dial-readout small { font-size:11px; }.performance-panel { padding:18px; }.live-speed-chart svg { max-height:210px; }.connection-locations strong { font-size:12px; } }
+@media(max-width:550px) { .speed-studio { padding:18px 14px; }.studio-top { align-items:flex-start; flex-direction:column; }.provider { margin-left:19px; }.speed-mode { width:100%; }.speed-mode button { flex:1; padding:9px 6px; }.speed-mode button span { margin-left:4px; }.speed-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }.metric-tile>strong { font-size:24px; }.test-controls { flex-direction:column; align-items:stretch; gap:14px; }.test-controls>button { width:100%; }.measurement-details dl { grid-template-columns:1fr; } }

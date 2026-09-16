@@ -466,3 +466,27 @@ Reference sources:
 `tests/calculators.test.ts` checks every calculator, including zero interest,
 amortization balance, inclusive-tax reversal, fractional splits, grade limits,
 leap days, month ends, invalid expressions, and every registry default.
+
+### Speed test studio and Quick mode
+
+The speed test defaults to Quick: six scored HTTP probes after one discarded
+setup request, then four streams with a one-second warm-up and three two-second
+rounds in each direction. Nominal transfer sampling is 14 seconds; request tails,
+latency, retries, and tab pauses add time. The UI estimates 15–25 seconds rather
+than enforcing a deadline. Thorough retains the original `parallel-v3` settings
+and 30–60 second estimate. Quick results use `parallel-quick-v4`; history labels
+both modes. Both exclude warm-up bytes, await server acknowledgement and report
+the median of completed rounds. Shorter sampling can vary more on bursty links.
+
+The SVG gauge interpolates real samples with a 320ms ease and respects reduced
+motion. The arc uses a square-root 0–300 Mbps scale; numbers remain uncapped.
+`live-chart.tsx` plots real timestamped estimates, separately for download/upload.
+Progress advances only at completed measurement milestones, reaching 100% only
+for a complete test. Retry/resume clears the interrupted phase's live chart.
+
+On Start, `location.ts` requests Cloudflare's `/cdn-cgi/trace` at the same origin
+as the measurement endpoints. It retains only country and routed edge code;
+known codes have city labels and unknown codes remain visible as codes. It does
+not request GPS, store IP addresses, or claim to find the geographically nearest
+server. The lookup times out after four seconds and never blocks measurement.
+A VPN can change the reported location; routing may change after the lookup.

@@ -37,6 +37,6 @@ export function HistoryTrend({results}: {results:(Measurement & {date:string})[]
       <polyline points={points('download')} fill="none" stroke="var(--accent)" strokeWidth="2"/>
       <polyline points={points('upload')} fill="none" stroke="var(--text-dim)" strokeWidth="2" strokeDasharray="4 3"/>
     </svg>
-    {ordered.some(result => result.method !== 'parallel-v3') && <p className="text-xs text-dim">Includes earlier measurement methods; compare with care.</p>}
+    {new Set(ordered.map(result => result.method)).size > 1 && <p className="text-xs text-dim">Includes different test modes or earlier methods; compare like-for-like results.</p>}
   </figure>;
 }

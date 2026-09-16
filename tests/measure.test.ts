@@ -140,3 +140,24 @@ test('activity hints handle unknown data and include latency/jitter for gaming',
   assert.equal(slowPing.find(item => item.name === 'HD streaming')?.good,true);
   assert.ok(activityRatings({download:100,upload:20,ping:20,jitter:3}).every(item => item.good));
 });
+
+test('quick latency uses six scored probes after one discarded setup request', async () => {
+  const original=globalThis.fetch; let clock=0; let count=0;
+  const timer=mock.method(performance,'now',()=>clock);
+  globalThis.fetch=async()=>{ clock += ++count===1 ? 900 : 30; return new Response(null); };
+  try {
+    const result=await measureLatency(new AbortController().signal,6);
+    assert.equal(count,7); assert.equal(result.ping,30); assert.equal(result.jitter,0);
+  } finally { globalThis.fetch=original; timer.mock.restore(); }
+});
+
+test('quick mode identifies its results and preserves partial metrics on network failure', async () => {
+  const original=globalThis.fetch; const progress:number[]=[]; let metrics:unknown;
+  globalThis.fetch=async url=>new Response(null,{status:new URL(String(url)).searchParams.get('bytes')==='0'?200:503});
+  try {
+    const result=await runSpeedTest(new AbortController().signal,()=>{},()=>{},(_key,_value,partial)=>{metrics={...partial};},()=>{},undefined,'quick',value=>progress.push(value));
+    assert.equal(result.method,'parallel-quick-v4'); assert.ok(result.ping!>=0);
+    assert.ok(metrics && typeof metrics==='object' && 'jitter' in metrics);
+    assert.deepEqual(progress,[10]); assert.equal(result.download,undefined);
+  } finally { globalThis.fetch=original; }
+});
