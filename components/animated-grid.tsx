@@ -6,6 +6,7 @@ interface GridItem { id: string; content: ReactNode }
 // Keep motion on wrappers so filtering never fights a card's hover/press transform.
 export default function AnimatedGrid({ items, visibleIds }: { items: GridItem[]; visibleIds: string[] }) {
   const gridRef = useRef<HTMLDivElement>(null);
+  const interrupted = useRef(new Map<HTMLElement, DOMRect>());
   const visibleKey = JSON.stringify(visibleIds);
 
   useLayoutEffect(() => {
@@ -21,7 +22,7 @@ export default function AnimatedGrid({ items, visibleIds }: { items: GridItem[];
     for (const element of elements) element.inert = !wanted.has(element.dataset.gridId!);
 
     function animate(element: HTMLElement, frames: Keyframe[], duration: number) {
-      const animation = element.animate(frames,{duration,easing:'ease-out',fill:'both'});
+      const animation = element.animate(frames,{duration,easing:'cubic-bezier(.22, 1, .36, 1)',fill:'both'});
       animations.push(animation);
       return animation;
     }
@@ -30,7 +31,8 @@ export default function AnimatedGrid({ items, visibleIds }: { items: GridItem[];
     // Transform/opacity frames run without recalculating layout on every frame.
     function arrange(motion: boolean) {
       const positions = new Map(elements.filter(element => !element.hidden)
-        .map(element => [element,element.getBoundingClientRect()]));
+        .map(element => [element,interrupted.current.get(element) ?? element.getBoundingClientRect()]));
+      interrupted.current.clear();
       for (const element of elements) element.hidden = !wanted.has(element.dataset.gridId!);
       if (!motion) return;
       for (const element of elements.filter(element => !element.hidden)) {
@@ -38,8 +40,8 @@ export default function AnimatedGrid({ items, visibleIds }: { items: GridItem[];
         const after = element.getBoundingClientRect();
         const frames = before
           ? [{transform:`translate(${before.left - after.left}px, ${before.top - after.top}px)`},{transform:'translate(0, 0)'}]
-          : [{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'translateY(0)'}];
-        const animation = animate(element,frames,200);
+          : [{opacity:0,transform:'translateY(12px) scale(.98)'},{opacity:1,transform:'translateY(0) scale(1)'}];
+        const animation = animate(element,frames,360);
         // Remove the finished transform so fixed tooltips and hover remain natural.
         void animation.finished.then(() => animation.cancel(),() => {});
       }
@@ -48,7 +50,7 @@ export default function AnimatedGrid({ items, visibleIds }: { items: GridItem[];
     const leaving = elements.filter(element => !element.hidden && !wanted.has(element.dataset.gridId!));
     if (reduced.matches || typeof grid.animate !== 'function') arrange(false);
     else {
-      const exits = leaving.map(element => animate(element,[{opacity:1},{opacity:0}],110));
+      const exits = leaving.map(element => animate(element,[{opacity:1},{opacity:0}],90));
       void Promise.allSettled(exits.map(animation => animation.finished)).then(() => {
         if (cancelled) return;
         arrange(!reduced.matches);
@@ -66,6 +68,10 @@ export default function AnimatedGrid({ items, visibleIds }: { items: GridItem[];
     reduced.addEventListener('change',stopMotion);
     return () => {
       cancelled = true;
+      // Capture positions before cancelling so a new search continues from the
+      // visible frame instead of snapping back to the previous layout.
+      interrupted.current = new Map(elements.filter(element => !element.hidden)
+        .map(element => [element,element.getBoundingClientRect()]));
       animations.forEach(animation => animation.cancel());
       reduced.removeEventListener('change',stopMotion);
     };
