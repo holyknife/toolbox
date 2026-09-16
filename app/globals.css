@@ -183,21 +183,48 @@ button:disabled:hover,button:disabled:active{filter:none;scale:1}
 .speed-visuals { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.05fr); gap:20px; align-items:center; padding:16px 0 22px; }
 .speed-dial { position:relative; width:100%; max-width:380px; margin:auto; }
 .speed-dial>svg { display:block; width:100%; overflow:visible; }
-.dial-readout { position:absolute; top:34%; left:20%; right:20%; display:flex; align-items:center; flex-direction:column; text-align:center; }
-.dial-readout>svg { color:var(--dial-end); margin-bottom:9px; }
-.dial-readout strong { font-size:clamp(30px,3.7vw,54px); line-height:1.1; letter-spacing:-2px; font-weight:650; font-variant-numeric:tabular-nums; }
-.dial-readout>span { font-size:12px; margin-top:7px; }
-.dial-readout small { font-size:10px; line-height:1.5; color:var(--dial-end); margin-top:12px; }
+.dial-readout { position:absolute; top:22%; bottom:12%; left:16%; right:16%; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center; pointer-events:none; }
+.dial-start-btn { pointer-events:auto; position:relative; width:76px; height:76px; border-radius:50%; background:linear-gradient(135deg,var(--dial-start),var(--dial-end)); color:#ffffff; border:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; cursor:pointer; box-shadow:0 4px 16px color-mix(in srgb,var(--dial-start) 45%,transparent); transition:transform 180ms ease,box-shadow 180ms ease,filter 180ms ease; }
+.dial-start-pulse { position:absolute; inset:-6px; border-radius:50%; border:2px solid color-mix(in srgb,var(--dial-start) 45%,transparent); animation:dial-pulse 2s cubic-bezier(.25,1,.5,1) infinite; pointer-events:none; }
+@keyframes dial-pulse { 0%{transform:scale(.96);opacity:.8} 50%{transform:scale(1.15);opacity:0} 100%{transform:scale(1.15);opacity:0} }
+.dial-start-label { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; font-size:11px; font-weight:700; letter-spacing:1.4px; line-height:1; }
+.dial-start-btn:hover { transform:scale(1.06); filter:brightness(1.06); box-shadow:0 6px 20px color-mix(in srgb,var(--dial-start) 55%,transparent); }
+.dial-start-btn:active { transform:scale(.96); }
+.dial-start-btn:focus-visible { outline:3px solid var(--accent); outline-offset:4px; }
+.dial-idle-center .dial-speed-value { margin-top:8px; display:flex; align-items:baseline; gap:4px; }
+.dial-idle-center .dial-speed-value strong { font-size:18px; font-weight:600; font-variant-numeric:tabular-nums; }
+.dial-idle-center .dial-speed-value span { font-size:11px; color:var(--text-dim); }
+.dial-idle-center small { font-size:10px; color:var(--dial-end); margin-top:3px; }
+.dial-running-center>svg { color:var(--dial-end); margin-bottom:7px; }
+.dial-running-center .dial-speed-value { display:flex; align-items:baseline; gap:5px; }
+.dial-running-center strong { font-size:clamp(32px,3.8vw,52px); line-height:1.1; letter-spacing:-2px; font-weight:650; font-variant-numeric:tabular-nums; }
+.dial-running-center span { font-size:12px; color:var(--text-dim); }
+.dial-running-center small { font-size:10px; line-height:1.5; color:var(--dial-end); margin-top:8px; }
+.dial-finished-center .dial-speed-value { display:flex; align-items:center; gap:6px; }
+.dial-finished-center .dial-speed-value svg { color:var(--dial-end); }
+.dial-finished-center strong { font-size:clamp(28px,3.2vw,42px); line-height:1.1; letter-spacing:-1.5px; font-weight:650; font-variant-numeric:tabular-nums; }
+.dial-finished-center span { font-size:12px; color:var(--text-dim); }
+.dial-restart-btn { pointer-events:auto; display:inline-flex; align-items:center; gap:6px; margin-top:8px; padding:6px 15px; background:var(--accent-soft); color:var(--accent); border:1px solid color-mix(in srgb,var(--accent) 30%,transparent); border-radius:20px; font-size:11px; font-weight:600; cursor:pointer; transition:transform 180ms ease,background-color 180ms ease; }
+.dial-restart-btn:hover { transform:scale(1.04); background:color-mix(in srgb,var(--accent-soft) 70%,var(--accent)); }
+.dial-restart-btn:active { transform:scale(.96); }
+.dial-finished-center small { font-size:10px; line-height:1.4; color:var(--dial-end); margin-top:6px; }
 .performance-panel { min-width:0; border:1px solid var(--border); border-radius:12px; background:color-mix(in srgb,var(--bg) 35%,transparent); padding:16px; }
 .live-speed-chart { margin:0; }
 .live-speed-chart figcaption { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:11px; }
 .live-speed-chart figcaption strong { font-weight:500; }.live-speed-chart figcaption>span { font-size:10px; color:var(--text-dim); background:var(--bg); padding:5px 8px; border-radius:5px; }
 .live-speed-chart svg { width:100%; display:block; margin-top:10px; }
 .live-speed-chart p { color:var(--dial-end); text-align:right; font-size:10px; margin:0 0 14px; font-variant-numeric:tabular-nums; }
-.connection-locations { border-top:1px solid var(--border); padding-top:15px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.connection-locations>div { display:flex; gap:8px; align-items:center; min-width:0; color:var(--text-dim); }
-.connection-locations>div+div { border-left:1px solid var(--border); padding-left:12px; }
-.connection-locations p { margin:0; min-width:0; }.connection-locations span { display:block; font-size:9px; margin-bottom:5px; }.connection-locations strong { display:block; font-size:10px; font-weight:500; color:var(--text); overflow-wrap:anywhere; }
+.connection-locations { border-top:1px solid var(--border); padding-top:15px; display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.location-item { display:flex; gap:10px; align-items:flex-start; min-width:0; color:var(--text-dim); }
+.location-item>div { min-width:0; flex:1; }
+.location-item+.location-item { border-left:1px solid var(--border); padding-left:14px; }
+.location-label { display:block; font-size:9px; letter-spacing:.6px; text-transform:uppercase; color:var(--text-dim); margin-bottom:3px; font-weight:600; }
+.location-val { display:block; font-size:12px; font-weight:600; color:var(--text); overflow-wrap:anywhere; line-height:1.35; }
+.location-sub { display:block; font-size:10px; color:var(--text-dim); margin-top:2px; line-height:1.3; }
+.location-ip-row { display:flex; align-items:center; gap:6px; margin-top:6px; flex-wrap:wrap; }
+.ip-text { font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size:10px; color:var(--text); background:var(--bg); border:1px solid var(--border); border-radius:5px; padding:2px 6px; letter-spacing:.3px; }
+.ip-toggle-btn { display:inline-flex; align-items:center; gap:4px; padding:2px 6px; background:var(--muted); border:1px solid var(--border); border-radius:5px; font-size:9px; color:var(--text-dim); cursor:pointer; transition:color 150ms,border-color 150ms; }
+.ip-toggle-btn:hover { color:var(--accent); border-color:var(--accent); }
 .location-hint { font-size:9px; color:var(--text-dim); margin:12px 0 0; line-height:1.5; }
 .chart-switch { display:flex; gap:3px; margin-bottom:10px; }
 .speed-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
@@ -210,5 +237,6 @@ button:disabled:hover,button:disabled:active{filter:none;scale:1}
 .measurement-details { margin-top:20px; font-size:12px; }.measurement-details summary { cursor:pointer; color:var(--text-dim); }.measurement-details dl { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:18px; }.measurement-details dt { color:var(--text-dim); font-size:10px; }.measurement-details dd { margin:5px 0 0; font-size:11px; }.measurement-details p { color:var(--text-dim); font-size:10px; line-height:1.7; margin-top:16px; }
 .speed-page .info-panel { padding-top:8px; }.speed-page .info-item { padding:20px 16px; border:1px solid var(--border); border-radius:12px; background:var(--panel); margin-bottom:12px; }.speed-page .info-item h3 { gap:10px; }.speed-page .info-item h3 svg { color:var(--dial-end); }.speed-page .info-item p { font-size:11px; }.speed-page .server-note { font-size:10px; line-height:1.8; border:0; padding:8px 4px; }
 @media(max-width:1250px) { .speed-page .speed-layout { grid-template-columns:1fr; }.speed-page .info-panel { display:none; } }
-@media(max-width:850px) { .speed-visuals { grid-template-columns:1fr; }.speed-dial { max-width:320px; }.dial-readout strong { font-size:47px; }.dial-readout small { font-size:11px; }.performance-panel { padding:18px; }.live-speed-chart svg { max-height:210px; }.connection-locations strong { font-size:12px; } }
-@media(max-width:550px) { .speed-studio { padding:18px 14px; }.studio-top { align-items:flex-start; flex-direction:column; }.provider { margin-left:19px; }.speed-mode { width:100%; }.speed-mode button { flex:1; padding:9px 6px; }.speed-mode button span { margin-left:4px; }.speed-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }.metric-tile>strong { font-size:24px; }.test-controls { flex-direction:column; align-items:stretch; gap:14px; }.test-controls>button { width:100%; }.measurement-details dl { grid-template-columns:1fr; } }
+@media(max-width:850px) { .speed-visuals { grid-template-columns:1fr; }.speed-dial { max-width:320px; }.dial-readout strong { font-size:42px; }.dial-readout small { font-size:11px; }.performance-panel { padding:18px; }.live-speed-chart svg { max-height:210px; }.location-val { font-size:13px; } }
+@media(max-width:550px) { .speed-studio { padding:18px 14px; }.studio-top { align-items:flex-start; flex-direction:column; }.provider { margin-left:19px; }.speed-mode { width:100%; }.speed-mode button { flex:1; padding:9px 6px; }.speed-mode button span { margin-left:4px; }.speed-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }.metric-tile>strong { font-size:24px; }.test-controls { flex-direction:column; align-items:stretch; gap:14px; }.test-controls>button { width:100%; }.measurement-details dl { grid-template-columns:1fr; } .connection-locations { grid-template-columns:1fr; gap:12px; } .location-item+.location-item { border-left:0; padding-left:0; border-top:1px solid var(--border); padding-top:10px; } }
+

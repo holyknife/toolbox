@@ -1,13 +1,13 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowDown, ArrowUp, Activity, Gauge, Play, RotateCw, Globe2, Server, Waves } from 'lucide-react';
+import { ArrowLeft, ArrowDown, ArrowUp, Activity, Gauge, Play, RotateCw, Globe2, Server, Waves, Eye, EyeOff } from 'lucide-react';
 import { storage } from '@/lib/storage';
 import { runSpeedTest, type Phase, type Measurement, type Outcome, type TestMode } from './measure';
 import type { StageState } from './session';
 import SpeedGauge from './speed-gauge';
 import LiveChart, { type SpeedPoint } from './live-chart';
-import { getConnectionLocation, type ConnectionLocation } from './location';
+import { getConnectionLocation, maskIp, type ConnectionLocation } from './location';
 import { HistoryTrend, ResultInsights } from './result-insights';
 
 type Result = Measurement & { id:string; date:string };
@@ -25,22 +25,29 @@ export default function SpeedTest() {
   const [progress,setProgress]=useState(0);
   const [series,setSeries]=useState<Record<'download'|'upload',SpeedPoint[]>>({download:[],upload:[]});
   const [location,setLocation]=useState<ConnectionLocation|null>(null);
-  const [locationState,setLocationState]=useState('Available after starting');
+  const [locationState,setLocationState]=useState('Detecting network…');
+  const [showIp,setShowIp]=useState(false);
   const [error,setError]=useState('');
   const [history,setHistory]=useState<Result[]>([]);
   const [storageNote,setStorageNote]=useState('');
   const controller=useRef<AbortController|null>(null);
   const mounted=useRef(false);
   const running=phase==='ping'||phase==='download'||phase==='upload';
-  useEffect(()=>{mounted.current=true;storage.get<unknown>('speed-test','history').then(saved=>{if(mounted.current&&validHistory(saved))setHistory(saved.slice(0,5));}).catch(()=>{if(mounted.current)setStorageNote('Local history is unavailable in this browser.');});return()=>{mounted.current=false;controller.current?.abort();};},[]);
+  useEffect(()=>{
+    mounted.current=true;
+    const initController=new AbortController();
+    getConnectionLocation(initController.signal).then(info=>{if(mounted.current)setLocation(info);}).catch(()=>{if(mounted.current)setLocationState('Available after starting');});
+    storage.get<unknown>('speed-test','history').then(saved=>{if(mounted.current&&validHistory(saved))setHistory(saved.slice(0,5));}).catch(()=>{if(mounted.current)setStorageNote('Local history is unavailable in this browser.');});
+    return()=>{mounted.current=false;initController.abort();controller.current?.abort();};
+  },[]);
   async function start() {
     if(controller.current)return;
     const run=new AbortController();controller.current=run;
     let active:Phase='ping';let stageStart=performance.now();
     const samples:Record<'download'|'upload',SpeedPoint[]>={download:[],upload:[]};
-    setRunMode(mode);setError('');setDetails(null);setValues({});setSpeed(0);setProgress(0);setPhase('ping');setStageState('running');setDirection('download');setSeries({download:[],upload:[]});setLocation(null);setLocationState('Finding route…');
+    setRunMode(mode);setError('');setDetails(null);setValues({});setSpeed(0);setProgress(0);setPhase('ping');setStageState('running');setDirection('download');setSeries({download:[],upload:[]});if(!location)setLocationState('Finding route…');
     // A failed location lookup must never block the actual test.
-    void getConnectionLocation(run.signal).then(info=>{if(mounted.current&&controller.current===run&&!run.signal.aborted)setLocation(info);}).catch(()=>{if(mounted.current&&controller.current===run&&!run.signal.aborted)setLocationState('Unavailable');});
+    void getConnectionLocation(run.signal).then(info=>{if(mounted.current&&controller.current===run&&!run.signal.aborted)setLocation(info);}).catch(()=>{if(mounted.current&&controller.current===run&&!run.signal.aborted&&!location)setLocationState('Unavailable');});
     try {
       const result=await runSpeedTest(run.signal,p=>{active=p;stageStart=performance.now();if(mounted.current){setPhase(p);setSpeed(0);if(p!=='ping')setDirection(p);}},value=>{
         if(!mounted.current||run.signal.aborted)return;
@@ -68,9 +75,9 @@ export default function SpeedTest() {
     <div className="speed-layout"><div><section className="test-panel speed-studio" aria-label="Connection speed test">
       <div className="studio-top"><div className="studio-status"><span className={`connection-dot ${running&&stageState!=='paused'?'is-running':''}`}/><div><strong>{running?'Test in progress':phase==='done'?'Your results are ready':'Let’s check your connection'}</strong><p role="status">{label}</p></div></div><span className="provider"><Globe2 size={14}/>Test network: Cloudflare</span></div>
       <div className="speed-mode" role="group" aria-label="Test duration"><button disabled={running} aria-pressed={mode==='quick'} onClick={()=>setMode('quick')}>Quick <span>~15–25s</span></button><button disabled={running} aria-pressed={mode==='thorough'} onClick={()=>setMode('thorough')}>Thorough <span>~30–60s</span></button></div>
-      <div className="speed-visuals"><SpeedGauge value={speed} direction={direction} caption={caption}/><div className="performance-panel">
+      <div className="speed-visuals"><SpeedGauge value={speed} direction={direction} caption={caption} phase={phase} onStart={start} disabled={running}/><div className="performance-panel">
         {!running&&phase!=='idle'&&<div className="chart-switch" role="group" aria-label="View measured direction">{(['download','upload'] as const).map(key=><button key={key} aria-pressed={direction===key} onClick={()=>{setDirection(key);setSpeed(values[key]??0);}}>{key==='download'?'Download':'Upload'}</button>)}</div>}
-        <LiveChart points={series[direction]} direction={direction}/><div className="connection-locations"><div><Globe2 size={18}/><p><span>Testing from</span><strong>{location?.country??locationState}</strong></p></div><div><Server size={18}/><p><span>Routed server</span><strong>{location?.server??locationState}</strong></p></div></div><p className="location-hint">Approximate network location · route reported at test start.</p>
+        <LiveChart points={series[direction]} direction={direction}/><div className="connection-locations"><div className="location-item"><Globe2 size={18}/><div><span className="location-label">Your network</span><strong className="location-val">{location?.isp||location?.country||locationState}</strong>{location?.city&&location?.country&&<span className="location-sub">{location.city}, {location.country}</span>}{location?.ip&&<div className="location-ip-row"><span className="ip-text">{showIp?location.ip:maskIp(location.ip)}</span><button type="button" className="ip-toggle-btn" onClick={()=>setShowIp(p=>!p)} title={showIp?'Hide IP for privacy':'Show full IP'} aria-label={showIp?'Hide IP':'Show IP'}>{showIp?<EyeOff size={11}/>:<Eye size={11}/>}<span>{showIp?'Hide':'Show'}</span></button></div>}</div></div><div className="location-item"><Server size={18}/><div><span className="location-label">Routed server</span><strong className="location-val">{location?.server??locationState}</strong><span className="location-sub">Cloudflare Edge Network</span></div></div></div><p className="location-hint">🔒 IP masked by default · Never saved to history or tracked.</p>
       </div></div>
       <div className="speed-metrics">{stats.map(s=>{const final=values[s.key];const live=running&&phase===s.key&&stageState==='running'&&speed>0;return <div className={`metric-tile metric-${s.key} ${running&&phase===s.key?'metric-active':''}`} key={s.key}><div className="metric-label"><s.icon size={17}/>{s.label}</div><strong>{final!==undefined?final.toFixed(1):live?speed.toFixed(1):s.key!=='jitter'&&details?.errors[s.key]?'Failed':running&&phase===s.key?'Testing…':'—'}</strong><small>{s.unit}{live?' · live':''}</small></div>;})}</div>
       <div className="test-controls"><div><span>{label}</span><div className="test-progress" role="progressbar" aria-label="Completed measurement stages" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><span style={{width:`${progress}%`}}/></div><small>{running?`${runMode==='quick'?'Quick':'Thorough'} test · progress advances as rounds finish`:'Choose a mode and see how your network performs.'}</small></div>{running?<button className="stop-test" onClick={()=>controller.current?.abort()}>Cancel test</button>:<button className="primary-button" onClick={start}>{phase==='idle'?<Play size={16}/>:<RotateCw size={16}/>} {phase==='idle'?'Start test':'Test again'}</button>}</div>
