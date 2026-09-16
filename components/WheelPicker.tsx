@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useId, useRef } from 'react';
-import type { KeyboardEvent, PointerEvent } from 'react';
+import type { KeyboardEvent, PointerEvent, ReactNode } from 'react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 export interface WheelOption { value: number; label: string }
 interface WheelPickerProps {
@@ -9,10 +10,11 @@ interface WheelPickerProps {
   value: number;
   options: WheelOption[];
   onChange: (value: number) => void;
+  icon?: ReactNode;
 }
 
 // A controlled, finite wheel. Positions and velocities are measured in rows, not pixels.
-export default function WheelPicker({ label, value, options, onChange }: WheelPickerProps) {
+export default function WheelPicker({ label, value, options, onChange, icon }: WheelPickerProps) {
   const id = useId();
   const viewport = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLDivElement>(null);
@@ -48,8 +50,8 @@ export default function WheelPicker({ label, value, options, onChange }: WheelPi
     for (const [index, row] of Array.from(track.current.children).entries()) {
       const element = row as HTMLElement;
       const distance = Math.abs(index - position.current);
-      element.style.opacity = String(Math.max(0, 1 - distance * 0.3));
-      element.style.transform = `scale(${Math.max(0.78, 1 - distance * 0.085)})`;
+      element.style.opacity = String(Math.max(0.18, 1 - distance * 0.35));
+      element.style.transform = `scale(${Math.max(0.82, 1 - distance * 0.08)})`;
       element.dataset.centered = String(index === nearest);
       element.setAttribute('aria-selected', String(index === nearest));
     }
@@ -65,15 +67,14 @@ export default function WheelPicker({ label, value, options, onChange }: WheelPi
     if (selected && selected.value !== latest.current.value) latest.current.onChange(selected.value);
   }
 
-  // Cubic ease-out starts fast and decelerates to zero at an exactly centered row.
-  // A release velocity projects the destination; longer flicks get more travel/time.
+  // Snappy cubic ease-out starts fast and decelerates to zero at an exactly centered row.
   function settle(destination: number, velocity = 0) {
     stop();
     const target = Math.round(bounded(destination));
     const start = position.current;
     const distance = target - start;
     if (reducedMotion.current || Math.abs(distance) < 0.001) { commit(target); return; }
-    const duration = velocity ? Math.max(240, Math.min(1100, 3 * Math.abs(distance / velocity))) : 320;
+    const duration = velocity ? Math.max(200, Math.min(850, 2.6 * Math.abs(distance / velocity))) : 220;
     const startTime = performance.now();
     function tick(now: number) {
       const progress = Math.min(1, (now - startTime) / duration);
@@ -82,6 +83,12 @@ export default function WheelPicker({ label, value, options, onChange }: WheelPi
       else { frame.current = 0; commit(target); }
     }
     frame.current = requestAnimationFrame(tick);
+  }
+
+  function step(delta: number) {
+    stop();
+    const current = Math.round(position.current);
+    settle(current + delta);
   }
 
   // Parent updates (Today or a shorter month) cancel stale motion and realign the wheel.
@@ -118,7 +125,7 @@ export default function WheelPicker({ label, value, options, onChange }: WheelPi
       const movement = Math.max(-3, Math.min(3, pixels / height.current));
       if (reducedMotion.current) { commit(position.current + Math.sign(movement)); return; }
       paint(position.current + movement);
-      wheelTimer.current = setTimeout(() => settle(position.current), 100);
+      wheelTimer.current = setTimeout(() => settle(position.current), 90);
     }
     element?.addEventListener('wheel', handleWheel, { passive: false });
     return () => {
@@ -183,18 +190,62 @@ export default function WheelPicker({ label, value, options, onChange }: WheelPi
     settle(target);
   }
 
-  return <div className="min-w-0">
-    <div id={`${id}-label`} className="mb-3 text-center text-sm font-medium text-dim">{label}</div>
+  return <div className="wheel-card">
+    <div id={`${id}-label`} className="wheel-card-header">
+      {icon}
+      <span>{label}</span>
+    </div>
+    <button
+      type="button"
+      className="wheel-step-btn wheel-step-up"
+      onClick={() => step(-1)}
+      aria-label={`Previous ${label}`}
+      tabIndex={-1}
+    >
+      <ChevronUp size={15} />
+    </button>
     <div className="wheel-picker-frame">
       <div className="wheel-picker-selection" aria-hidden="true"/>
-      <div ref={viewport} role="listbox" tabIndex={0} aria-labelledby={`${id}-label`} aria-activedescendant={`${id}-${value}`} className="wheel-picker" onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={event => endDrag(event)} onPointerCancel={event => endDrag(event, true)} onLostPointerCapture={event => endDrag(event, true)} onKeyDown={handleKey}>
+      <div
+        ref={viewport}
+        role="listbox"
+        tabIndex={0}
+        aria-labelledby={`${id}-label`}
+        aria-activedescendant={`${id}-${value}`}
+        className="wheel-picker"
+        onPointerDown={startDrag}
+        onPointerMove={moveDrag}
+        onPointerUp={event => endDrag(event)}
+        onPointerCancel={event => endDrag(event, true)}
+        onLostPointerCapture={event => endDrag(event, true)}
+        onKeyDown={handleKey}
+      >
         <div ref={track} className="wheel-picker-track">
-          {options.map((option, index) => <div key={option.value} id={`${id}-${option.value}`} role="option" aria-selected={option.value === value} data-centered={option.value === value} className="wheel-picker-item" onClick={event => {
-            // Pointer releases already center their row. Keep synthetic assistive clicks working.
-            if (event.detail === 0 || performance.now() - lastPointerRelease.current > 100) settle(index);
-          }}>{option.label}</div>)}
+          {options.map((option, index) => <div
+            key={option.value}
+            id={`${id}-${option.value}`}
+            role="option"
+            aria-selected={option.value === value}
+            data-centered={option.value === value}
+            className="wheel-picker-item"
+            onClick={event => {
+              if (event.detail === 0 || performance.now() - lastPointerRelease.current > 100) settle(index);
+            }}
+          >
+            {option.label}
+          </div>)}
         </div>
       </div>
     </div>
+    <button
+      type="button"
+      className="wheel-step-btn wheel-step-down"
+      onClick={() => step(1)}
+      aria-label={`Next ${label}`}
+      tabIndex={-1}
+    >
+      <ChevronDown size={15} />
+    </button>
   </div>;
 }
+
