@@ -43,33 +43,82 @@ test('formatNetworkInfo maps Cloudflare server-side network fields accurately',(
     server: 'Unavailable',
   });
 });
-test('getConnectionLocation calls same-origin /api/network-info without external requests',async()=>{
+test('getConnectionLocation uses primary client-side lookup when available (Chrome / mobile / Shields OFF)',async()=>{
   const original=globalThis.fetch;
-  let requestedUrl='';
+  const calledUrls: string[] = [];
   globalThis.fetch=async(url)=>{
-    requestedUrl=String(url);
-    return new Response(JSON.stringify({
-      ip: '198.51.100.25',
-      country: 'US',
-      city: 'San Jose',
-      region: 'California',
-      asn: 13335,
-      isp: 'Cloudflare, Inc.',
-      colo: 'SJC',
-    }),{status:200,headers:{'content-type':'application/json'}});
+    const urlStr=String(url);
+    calledUrls.push(urlStr);
+    if (urlStr.includes('speed.cloudflare.com/cdn-cgi/trace')) {
+      return new Response('loc=NP\ncolo=KTM\nip=203.0.113.10\n', { status: 200 });
+    }
+    if (urlStr.includes('ipwho.is')) {
+      return new Response(JSON.stringify({
+        city: 'Kathmandu',
+        connection: { isp: 'WorldLink Communications' },
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    return new Response(null, { status: 404 });
   };
   try {
     const info=await getConnectionLocation(new AbortController().signal);
-    assert.equal(requestedUrl,'/api/network-info');
     assert.deepEqual(info,{
-      country:'United States',
-      server:'San Jose · SJC',
-      ip:'198.51.100.25',
-      isp:'Cloudflare, Inc.',
-      city:'San Jose',
-      asn:13335,
-      region:'California',
+      country:'Nepal',
+      server:'Kathmandu · KTM',
+      ip:'203.0.113.10',
+      isp:'WorldLink Communications',
+      city:'Kathmandu',
     });
+    // Verifies that /api/network-info was not needed because primary succeeded completely
+    assert.equal(calledUrls.some(u => u.includes('/api/network-info')), false);
+  } finally {
+    globalThis.fetch=original;
+  }
+});
+
+test('getConnectionLocation falls back to same-origin /api/network-info when Brave Shields blocks trace',async()=>{
+  const original=globalThis.fetch;
+  const calledUrls: string[] = [];
+  globalThis.fetch=async(url)=>{
+    const urlStr=String(url);
+    calledUrls.push(urlStr);
+    if (urlStr.includes('speed.cloudflare.com/cdn-cgi/trace')) {
+      // Simulate Brave Shields blocking the third-party trace request
+      throw new TypeError('Failed to fetch (ERR_BLOCKED_BY_CLIENT)');
+    }
+    if (urlStr.includes('ipwho.is')) {
+      // ipwho might succeed or return partial data
+      return new Response(JSON.stringify({
+        city: 'Kathmandu',
+        connection: { isp: 'WorldLink Communications' },
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    if (urlStr.includes('/api/network-info')) {
+      return new Response(JSON.stringify({
+        ip: '203.0.113.50',
+        country: 'NP',
+        city: 'Kathmandu',
+        region: 'Bagmati',
+        asn: 17501,
+        isp: 'WorldLink Communications',
+        colo: 'KTM',
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    return new Response(null, { status: 404 });
+  };
+  try {
+    const info=await getConnectionLocation(new AbortController().signal);
+    // Verifies that fallback filled in country, server, and IP while preserving ISP
+    assert.deepEqual(info,{
+      country:'Nepal',
+      server:'Kathmandu · KTM',
+      ip:'203.0.113.50',
+      isp:'WorldLink Communications',
+      city:'Kathmandu',
+      asn:17501,
+      region:'Bagmati',
+    });
+    assert.equal(calledUrls.some(u => u.includes('/api/network-info')), true);
   } finally {
     globalThis.fetch=original;
   }
