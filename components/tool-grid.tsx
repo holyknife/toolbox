@@ -8,7 +8,6 @@ import { CommandTrigger } from './command-palette';
 import ToolArtwork from './tool-artwork';
 import FavoriteButton from './favorite-button';
 import { useFavorites } from '@/lib/favorites';
-import { getMonthlyUsageLabel } from '@/lib/social-stats';
 
 const baseCategories = ['All', 'Language', 'Utilities', 'Converters', 'Internet'] as const;
 type Category = (typeof baseCategories)[number] | 'Pinned';
@@ -28,7 +27,6 @@ const featured = ['calculators', 'nepali-typing'];
 function ToolCard({ tool }: { tool: Tool }) {
   const detail = presentation[tool.slug] ?? { category: tool.category, description: tool.description };
   const isFeatured = featured.includes(tool.slug);
-  const usageLabel = getMonthlyUsageLabel(tool.slug);
 
   return (
     <Link href={`/tools/${tool.slug}`} className={`tool-card directory-card featured-card feature-${tool.slug} relative`}>
@@ -39,13 +37,7 @@ function ToolCard({ tool }: { tool: Tool }) {
         {tool.slug === 'nepali-typing' ? <span className="nepali-symbol">अ</span> : <tool.icon size={29} strokeWidth={1.8}/>}
       </span>
       <div className="directory-card-copy">
-        <div className="flex items-center gap-2 flex-wrap mb-1">
-          <span className="category m-0">{detail.category}</span>
-          <span className="text-[11px] font-medium text-text-dim/80 bg-muted/60 px-1.5 py-0.5 rounded-md inline-flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-            {usageLabel}
-          </span>
-        </div>
+        <span className="category mb-1 block">{detail.category}</span>
         <h3>{tool.name}</h3>
         <p>{detail.description}</p>
       </div>
@@ -117,12 +109,7 @@ export default function ToolGrid() {
           <h1>All tools</h1>
           <span className="directory-count">{tools.length} utilities</span>
         </div>
-        <p className="flex items-center gap-2">
-          <span>Simple tools. Real use.</span>
-          <span className="text-xs text-text-dim/80 bg-muted/60 px-2 py-0.5 rounded-full">
-            ⚡ 350k+ uses this month
-          </span>
-        </p>
+        <p>Simple tools. Real use.</p>
       </div>
       <div className="directory-search">
         <label>

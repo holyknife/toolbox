@@ -18,7 +18,6 @@ import {
 import CalculatorIcon from './components/calculator-icon';
 import FavoriteButton from '@/components/favorite-button';
 import { useFavorites } from '@/lib/favorites';
-import { getMonthlyUsageLabel } from '@/lib/social-stats';
 
 type SortOption = 'relevant' | 'alpha' | 'category';
 
@@ -104,13 +103,11 @@ export default function CalculatorsHub() {
   };
 
   const renderCard = (c: CalculatorItem) => {
-    const usageLabel = getMonthlyUsageLabel(c.slug);
-
     return (
       <Link
         key={c.slug}
         href={c.routePath}
-        className="group relative p-4 rounded-2xl bg-panel border border-border/80 hover:border-blue-500/50 dark:hover:border-blue-400/40 hover:shadow-xs transition-all flex flex-col justify-between min-h-[148px]"
+        className="group relative p-4 rounded-2xl bg-panel border border-border/80 hover:border-blue-500/50 dark:hover:border-blue-400/40 hover:shadow-xs transition-all flex flex-col justify-between min-h-[140px]"
       >
         <div className="absolute top-3 right-3 z-10">
           <FavoriteButton slug={c.slug} size={16} />
@@ -139,9 +136,8 @@ export default function CalculatorsHub() {
         </div>
 
         <div className="mt-3 pt-2.5 border-t border-border/50 flex items-center justify-between text-xs">
-          <span className="text-[11px] font-medium text-text-dim/80 bg-muted/60 px-2 py-0.5 rounded-md inline-flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-            {usageLabel}
+          <span className="text-[11px] font-medium text-dim group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+            Open tool &rarr;
           </span>
           <div className="w-6 h-6 rounded-full bg-border/20 group-hover:bg-blue-600/10 dark:group-hover:bg-blue-400/15 flex items-center justify-center text-dim group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
             <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
@@ -152,7 +148,7 @@ export default function CalculatorsHub() {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-7">
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-2 sm:py-3 space-y-5">
       {/* Top Breadcrumb */}
       <nav className="flex items-center gap-2 text-[12px] text-dim" aria-label="Breadcrumb">
         <Link href="/" className="hover:text-text transition-colors">
@@ -180,10 +176,7 @@ export default function CalculatorsHub() {
 
         <div className="hidden md:flex flex-col items-end text-xs text-dim/80 border-l border-border/70 pl-4 py-1 leading-tight">
           <span className="font-semibold text-text">9 Essential Tools</span>
-          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1 mt-0.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
-            94.2k uses this month
-          </span>
+          <span className="text-[11px] text-dim mt-0.5">Free & instant</span>
         </div>
       </div>
 

@@ -7,6 +7,7 @@ import { ArrowUpRight, Box, Grid2X2, Moon, Sun } from 'lucide-react';
 import { tools } from '@/lib/tools-registry';
 import CommandPalette, { CommandTrigger } from './command-palette';
 import FavoriteButton from './favorite-button';
+import VisitorCounter from './visitor-counter';
 import { recordToolUsage } from '@/lib/favorites';
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -42,6 +43,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
     <main id="main">
       {/* A route key restarts the entrance animation without remounting the shell. */}
       <div key={path} className="page-transition">{children}</div>
-    </main><footer><span>Made for the everyday.</span><span>Simple by design <ArrowUpRight size={13}/></span></footer></div>
+    </main><footer><span>Made for the everyday.</span><VisitorCounter/><span>Simple by design <ArrowUpRight size={13}/></span></footer></div>
   </div>;
 }

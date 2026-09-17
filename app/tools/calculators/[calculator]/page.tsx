@@ -40,7 +40,7 @@ export default async function Page({
   }
 
   return (
-    <div className="page calculators-detail-page py-4 sm:py-6 px-3 sm:px-6 max-w-7xl mx-auto">
+    <div className="page calculators-detail-page !pt-1 sm:!pt-2 pb-4 sm:pb-6 px-3 sm:px-6 max-w-7xl mx-auto">
       <CalculatorViewDispatcher slug={calculator} />
     </div>
   );

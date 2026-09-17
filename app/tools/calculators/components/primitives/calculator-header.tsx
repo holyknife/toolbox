@@ -5,19 +5,16 @@ import Link from 'next/link';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import type { CalculatorItem } from '../../registry/calculators-registry';
 import FavoriteButton from '@/components/favorite-button';
-import { getMonthlyUsageLabel } from '@/lib/social-stats';
 
 interface CalculatorHeaderProps {
   calculator: CalculatorItem;
 }
 
 export default function CalculatorHeader({ calculator }: CalculatorHeaderProps) {
-  const usageLabel = getMonthlyUsageLabel(calculator.slug);
-
   return (
-    <div className="mb-6 pb-4 border-b border-border/70">
+    <div className="mb-4 pb-3 border-b border-border/70">
       {/* Breadcrumbs */}
-      <nav className="flex items-center gap-2 text-[12px] text-text-dim mb-4" aria-label="Breadcrumb">
+      <nav className="flex items-center gap-2 text-[12px] text-text-dim mb-2.5" aria-label="Breadcrumb">
         <Link href="/" className="hover:text-text transition-colors">
           Workspace
         </Link>
@@ -36,10 +33,6 @@ export default function CalculatorHeader({ calculator }: CalculatorHeaderProps) 
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text m-0">
               {calculator.title}
             </h1>
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium bg-muted text-text-dim border border-border">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
-              <span>{usageLabel}</span>
-            </span>
             <FavoriteButton slug={calculator.slug} size={17} />
           </div>
           <p className="text-[13px] sm:text-[14px] text-text-dim m-0 max-w-2xl leading-relaxed">
