@@ -2,14 +2,18 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ChevronRight, CheckCircle2, MapPin } from 'lucide-react';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import type { CalculatorItem } from '../../registry/calculators-registry';
+import FavoriteButton from '@/components/favorite-button';
+import { getMonthlyUsageLabel } from '@/lib/social-stats';
 
 interface CalculatorHeaderProps {
   calculator: CalculatorItem;
 }
 
 export default function CalculatorHeader({ calculator }: CalculatorHeaderProps) {
+  const usageLabel = getMonthlyUsageLabel(calculator.slug);
+
   return (
     <div className="mb-6 pb-4 border-b border-border/70">
       {/* Breadcrumbs */}
@@ -21,14 +25,6 @@ export default function CalculatorHeader({ calculator }: CalculatorHeaderProps) 
         <Link href="/tools/calculators" className="hover:text-text transition-colors">
           Calculators
         </Link>
-        {calculator.scope === 'nepal' && (
-          <>
-            <ChevronRight size={12} className="opacity-40" />
-            <Link href="/tools/calculators/nepal" className="hover:text-text transition-colors">
-              Nepal
-            </Link>
-          </>
-        )}
         <ChevronRight size={12} className="opacity-40" />
         <span className="font-semibold text-text truncate">{calculator.shortTitle}</span>
       </nav>
@@ -40,18 +36,11 @@ export default function CalculatorHeader({ calculator }: CalculatorHeaderProps) 
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text m-0">
               {calculator.title}
             </h1>
-            {calculator.nepalSpecific && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-400 border border-red-200/60 dark:border-red-800/40">
-                <MapPin size={11} />
-                <span>Nepal</span>
-              </span>
-            )}
-            {calculator.version && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-muted text-text-dim border border-border">
-                <CheckCircle2 size={11} className="text-emerald-500" />
-                <span>{calculator.version}</span>
-              </span>
-            )}
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium bg-muted text-text-dim border border-border">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+              <span>{usageLabel}</span>
+            </span>
+            <FavoriteButton slug={calculator.slug} size={17} />
           </div>
           <p className="text-[13px] sm:text-[14px] text-text-dim m-0 max-w-2xl leading-relaxed">
             {calculator.description}
@@ -59,11 +48,11 @@ export default function CalculatorHeader({ calculator }: CalculatorHeaderProps) 
         </div>
 
         <Link
-          href={calculator.scope === 'nepal' ? '/tools/calculators/nepal' : '/tools/calculators'}
+          href="/tools/calculators"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-dim hover:text-accent transition-colors self-start sm:self-center flex-shrink-0"
         >
           <ArrowLeft size={14} />
-          <span>{calculator.scope === 'nepal' ? 'Nepal calculators' : 'All calculators'}</span>
+          <span>All calculators</span>
         </Link>
       </div>
     </div>

@@ -137,6 +137,7 @@ export default function CurrencyView() {
   // Cheat Sheet Data
   const cheatSheetUnits = [1, 5, 10, 50, 100, 500, 1000];
   const cheatSheetData = cheatSheetUnits.map((u) => ({
+    id: u,
     unit: `${fromInfo.symbol} ${u}`,
     converted: `${toInfo.symbol} ${(u * exchangeRate).toLocaleString(undefined, {
       minimumFractionDigits: 2,
