@@ -26,7 +26,7 @@
   from{opacity:0;transform:translateY(6px)}
   to{opacity:1;transform:translateY(0)}
 }
-.page-transition{animation:page-enter 220ms ease-out}
+.page-transition{animation:page-enter 320ms cubic-bezier(.22,1,.36,1)}
 .command-trigger{display:inline-flex;align-items:center;gap:8px;flex-shrink:0;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text-dim);padding:7px 9px;font-size:12px}
 .command-trigger kbd{font-family:inherit;white-space:nowrap}
 .command-dialog{width:min(560px,calc(100vw - 32px));max-height:calc(100dvh - 48px);margin:clamp(24px,12vh,100px) auto auto;padding:0;border:1px solid var(--border);border-radius:var(--radius);background:var(--panel);color:var(--text);box-shadow:var(--card-hover-shadow);overflow:auto}
@@ -66,8 +66,8 @@
 }
 button,a,.coming-card{
   transition-property:color,background-color,border-color,box-shadow,opacity,filter,transform,translate,scale;
-  transition-duration:200ms;
-  transition-timing-function:ease-in-out;
+  transition-duration:240ms;
+  transition-timing-function:cubic-bezier(.22,1,.36,1);
 }
 .tool-card,.interaction-card,.coming-card{
   transition:translate 200ms ease-in-out,scale 200ms ease-in-out,border-color 200ms ease-in-out,box-shadow 200ms ease-in-out;
@@ -76,7 +76,7 @@ button,a,.coming-card{
 .tool-card:hover{transform:none}
 @media(hover:hover) and (pointer:fine){
   .tool-card:hover,.interaction-card:hover,.coming-card:hover{translate:0 -3px;box-shadow:var(--card-hover-shadow)}
-  button:enabled:hover{scale:1.015;filter:brightness(.96)}
+  button:enabled:hover{filter:brightness(.98)}
   a:not(.tool-card):not(.interaction-card):not(.primary-button):hover{color:var(--accent)}
   .nav-link:hover,.back-link:hover{scale:1.01}
 }
@@ -117,7 +117,7 @@ button:disabled:hover,button:disabled:active{filter:none;scale:1}
   min-height: 176px;
   gap: 18px;
   padding: 24px 20px;
-  transition: translate 360ms cubic-bezier(.22,1,.36,1), box-shadow 360ms ease, border-color 250ms ease;
+  transition: translate 360ms cubic-bezier(.22,1,.36,1), scale 220ms cubic-bezier(.22,1,.36,1), box-shadow 360ms ease, border-color 250ms ease, background-color 240ms ease, color 240ms ease;
 }
 .directory-card .tool-icon { position: relative; z-index: 1; width: 54px; height: 58px; }
 .featured-card .directory-card-copy { width: calc(100% - 158px); max-width: 245px; padding-right: 0; }
@@ -366,13 +366,7 @@ button:disabled:hover,button:disabled:active{filter:none;scale:1}
   }
 }
 
-/* Fluid, GPU-accelerated theme transition */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 200ms;
-  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-}
-
+/* Theme colors interpolate directly, without a full-page snapshot overlay. */
 body,
 .app-shell,
 .main-shell,
@@ -411,3 +405,11 @@ body,
 
 
 
+
+/* Use identical theme tokens at every viewport, including browser overscroll. */
+html { background:var(--bg); }
+input,select,textarea { color:var(--text); accent-color:var(--accent); }
+.theme-switch:active { transform:none; }
+@media(hover:none) {
+  .primary-button:hover { filter:none; }
+}

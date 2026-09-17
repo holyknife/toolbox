@@ -3,11 +3,11 @@ import { notFound } from 'next/navigation';
 import { calculators, getCalculatorBySlug } from '../registry/calculators-registry';
 import CalculatorViewDispatcher from '../components/calculator-view-dispatcher';
 
-// Prebuild all 26 official calculators plus legacy aliases
+// Prebuild all 9 calculators plus convenient aliases
 export function generateStaticParams() {
-  const legacySlugs = ['basic', 'tax', 'gpa', 'grade', 'age'];
+  const aliases = ['currency', 'loan', 'percent', 'forex'];
   const allSlugs = Array.from(
-    new Set([...calculators.map((c) => c.slug), ...legacySlugs])
+    new Set([...calculators.map((c) => c.slug), ...aliases])
   );
   return allSlugs.map((slug) => ({ calculator: slug }));
 }
@@ -23,7 +23,7 @@ export async function generateMetadata({
     title: item ? `${item.title} | Toolbox` : 'Calculator | Toolbox',
     description:
       item?.description ||
-      'Clean Nepal-first and everyday calculators for study, money, dates, and productivity.',
+      'Clean, instant, and privacy-friendly calculators for everyday math, finance, and health.',
   };
 }
 
@@ -35,7 +35,7 @@ export default async function Page({
   const { calculator } = await params;
   const item = getCalculatorBySlug(calculator);
 
-  if (!item && !['basic', 'tax', 'gpa', 'grade', 'age'].includes(calculator)) {
+  if (!item && !['currency', 'loan', 'percent', 'forex'].includes(calculator)) {
     notFound();
   }
 

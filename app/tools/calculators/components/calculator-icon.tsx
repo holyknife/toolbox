@@ -22,11 +22,15 @@ import {
   Coins,
   CalendarHeart,
   CalendarDays,
+  Calendar,
   Fuel,
   Zap,
   Users,
   HeartPulse,
+  Activity,
   Crop,
+  Percent,
+  BadgePercent,
   HelpCircle,
 } from 'lucide-react';
 
@@ -58,11 +62,15 @@ export default function CalculatorIcon({ name, size = 20, className = '' }: Prop
     Coins,
     CalendarHeart,
     CalendarDays,
+    Calendar,
     Fuel,
     Zap,
     Users,
     HeartPulse,
+    Activity,
     Crop,
+    Percent,
+    BadgePercent,
   };
 
   const Component = iconMap[name] || HelpCircle;

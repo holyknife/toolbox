@@ -5,25 +5,27 @@ import { calculateAge } from '../../engines/everyday-engine';
 import CalculatorHeader from '../primitives/calculator-header';
 import ResultPanel from '../primitives/result-panel';
 import ResultMetric from '../primitives/result-metric';
-import InputField, { SelectField } from '../primitives/input-section';
+import InputField from '../primitives/input-section';
 import FormulaExplanation from '../primitives/formula-explanation';
-import SourceNotice from '../primitives/source-notice';
 import { getCalculatorBySlug } from '../../registry/calculators-registry';
 
-export default function BsadAgeView() {
-  const calculator = getCalculatorBySlug('bs-ad-age')!;
+export default function AgeView() {
+  const calculator = getCalculatorBySlug('age')!;
 
-  const [calendar, setCalendar] = useState<'BS' | 'AD'>('BS');
-  const [year, setYear] = useState(2058);
-  const [month, setMonth] = useState(5);
-  const [day, setDay] = useState(15);
+  const [calendar, setCalendar] = useState<'AD' | 'BS'>('AD');
+  const [year, setYear] = useState(2000);
+  const [month, setMonth] = useState(1);
+  const [day, setDay] = useState(1);
 
   const result = useMemo(() => {
     return calculateAge(
-      { year: Number(year) || 2058, month: Number(month) || 1, day: Number(day) || 1 },
+      { year: Number(year) || 2000, month: Number(month) || 1, day: Number(day) || 1 },
       calendar
     );
   }, [year, month, day, calendar]);
+
+  const totalWeeks = Math.floor(result.totalDays / 7);
+  const totalHours = result.totalDays * 24;
 
   return (
     <div className="w-full max-w-5xl mx-auto">
@@ -36,30 +38,30 @@ export default function BsadAgeView() {
             <button
               type="button"
               onClick={() => {
-                setCalendar('BS');
-                setYear(2058);
-                setMonth(5);
-                setDay(15);
-              }}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
-                calendar === 'BS' ? 'bg-card text-text shadow-xs' : 'text-text-dim hover:text-text'
-              }`}
-            >
-              Bikram Sambat (BS / वि.सं.)
-            </button>
-            <button
-              type="button"
-              onClick={() => {
                 setCalendar('AD');
-                setYear(2001);
-                setMonth(8);
-                setDay(31);
+                setYear(2000);
+                setMonth(1);
+                setDay(1);
               }}
               className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
                 calendar === 'AD' ? 'bg-card text-text shadow-xs' : 'text-text-dim hover:text-text'
               }`}
             >
-              Gregorian (AD / ई.सं.)
+              Standard Calendar (AD / Gregorian)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCalendar('BS');
+                setYear(2056);
+                setMonth(9);
+                setDay(17);
+              }}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
+                calendar === 'BS' ? 'bg-card text-text shadow-xs' : 'text-text-dim hover:text-text'
+              }`}
+            >
+              Nepali Calendar (BS / वि.सं.)
             </button>
           </div>
 
@@ -95,17 +97,37 @@ export default function BsadAgeView() {
           </div>
 
           <FormulaExplanation
-            title="Exact Nepal Calendar Conversion"
+            title="How Exact Age is Calculated"
             notes={[
-              'Uses the official Nepal Government Patro dataset (BS 1970 to 2100).',
-              'Converts BS to Gregorian AD with exact day counts per Nepali month (which range between 29 to 32 days).',
-              'Computes completed calendar years, months, days, total elapsed days, day of the week, and countdown to next birthday.',
+              'Computes completed calendar years, months, and days based on elapsed calendar intervals.',
+              'Calculates day of the week on which you were born and exact countdown to your next birthday.',
+              'Seamlessly maps between Bikram Sambat (BS) and Gregorian (AD) calendars.',
             ]}
           />
-          <SourceNotice source="Official Bikram Sambat Ephemeris & Nepal Government Panchanga Nirnayak Samiti" />
+
+          {/* Life Milestones breakdown */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-card border border-border/80 shadow-xs space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-text-dim m-0">
+              Total Life Milestones
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="p-3 rounded-xl bg-muted/30 border border-border/60">
+                <span className="text-[11px] text-text-dim block">Total Weeks</span>
+                <span className="text-base font-bold text-text">{totalWeeks.toLocaleString()}</span>
+              </div>
+              <div className="p-3 rounded-xl bg-muted/30 border border-border/60">
+                <span className="text-[11px] text-text-dim block">Total Days</span>
+                <span className="text-base font-bold text-text">{result.totalDays.toLocaleString()}</span>
+              </div>
+              <div className="p-3 rounded-xl bg-muted/30 border border-border/60 col-span-2 sm:col-span-1">
+                <span className="text-[11px] text-text-dim block">Approx. Hours</span>
+                <span className="text-base font-bold text-text">{totalHours.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Right Sticky Result */}
+        {/* Right Output Panel */}
         <div className="lg:col-span-5 lg:sticky lg:top-6 space-y-4">
           <ResultPanel
             title="Exact Age"
@@ -115,28 +137,26 @@ export default function BsadAgeView() {
               label: `Born on ${result.dayOfWeek}`,
               variant: 'success',
             }}
-            shareSummary={`Age: ${result.years} years, ${result.months} months, ${result.days} days (Born ${result.dayOfWeek}, BS: ${result.bsDob.year}-${result.bsDob.month}-${result.bsDob.day})`}
+            shareSummary={`Age: ${result.years} years, ${result.months} months, ${result.days} days (Born ${result.dayOfWeek})`}
           >
             <div className="grid grid-cols-2 gap-2 mt-4">
               <ResultMetric
-                label="Total Days Lived"
-                value={result.totalDays.toLocaleString()}
-                unit="days"
-                highlight="accent"
-              />
-              <ResultMetric
-                label="Next Birthday In"
-                value={result.nextBirthdayDays}
-                unit="days"
+                label="Next Birthday"
+                value={`${result.nextBirthdayDays} days`}
                 highlight="success"
               />
               <ResultMetric
-                label="Date in BS (वि.सं.)"
-                value={`${result.bsDob.year}/${result.bsDob.month}/${result.bsDob.day}`}
+                label="Total Days"
+                value={result.totalDays.toLocaleString()}
+                highlight="accent"
               />
               <ResultMetric
-                label="Date in AD (ई.सं.)"
+                label="Date in AD"
                 value={`${result.adDob.year}/${result.adDob.month}/${result.adDob.day}`}
+              />
+              <ResultMetric
+                label="Date in BS"
+                value={`${result.bsDob.year}/${result.bsDob.month}/${result.bsDob.day}`}
               />
             </div>
           </ResultPanel>

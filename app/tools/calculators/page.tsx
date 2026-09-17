@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import CalculatorsHub from './calculators-hub';
 
 export const metadata: Metadata = {
-  title: 'Calculators | Nepal-First Utility Suite',
+  title: 'Calculators | Toolbox',
   description:
-    'Clean Nepal-first calculators for SEE & NEB Class 12 GPA, salary tax, land units (Ropani/Bigha), BS/AD dates, gold tola, electricity, and everyday finance.',
+    'Simple, accurate, and instant calculators for everyday math, finance, currency conversion, health, dates, and GPA.',
 };
 
 export default function Page() {
