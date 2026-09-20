@@ -1,16 +1,16 @@
 'use client';
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Clock, Search, Star, X } from 'lucide-react';
+import { ArrowRight, Search, Star, X } from 'lucide-react';
 import { tools, type Tool } from '@/lib/tools-registry';
 import AnimatedGrid from './animated-grid';
 import { CommandTrigger } from './command-palette';
 import ToolArtwork from './tool-artwork';
 import FavoriteButton from './favorite-button';
-import { useFavorites, useRecentTools } from '@/lib/favorites';
+import { useFavorites } from '@/lib/favorites';
 
 const baseCategories = ['All', 'Language', 'Utilities', 'Converters', 'Internet'] as const;
-type Category = (typeof baseCategories)[number] | 'Pinned' | 'Recent';
+type Category = (typeof baseCategories)[number] | 'Pinned';
 
 const presentation: Record<string, { category: (typeof baseCategories)[number]; description: string }> = {
   calculators: { category: 'Utilities', description: 'Quick calculations for money, grades, health, dates and more.' },
@@ -69,20 +69,11 @@ function ToolCard({ tool }: { tool: Tool }) {
 export default function ToolGrid() {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<Category>('All');
-  const { favorites, mounted: favMounted } = useFavorites();
-  const { recentTools, mounted: recentMounted } = useRecentTools(12);
-  const mounted = favMounted && recentMounted;
+  const { favorites, mounted } = useFavorites();
 
   const pinnedSlugs = useMemo(() => (mounted ? favorites : []), [favorites, mounted]);
-  const recentSlugs = useMemo(() => (mounted ? recentTools.map(r => r.tool.slug) : []), [recentTools, mounted]);
 
   const ordered = useMemo(() => {
-    if (category === 'Recent') {
-      const recentList = recentTools.map(r => r.tool);
-      const remaining = tools.filter(t => !recentSlugs.includes(t.slug));
-      return [...recentList, ...remaining];
-    }
-
     // When "All" is active and user has pinned tools, pin them to the top of the list!
     const pinnedTools = tools.filter(t => pinnedSlugs.includes(t.slug));
     const unpinnedTools = tools.filter(t => !pinnedSlugs.includes(t.slug));
@@ -92,7 +83,7 @@ export default function ToolGrid() {
     const standardUnpinned = unpinnedTools.filter(t => !featured.includes(t.slug));
 
     return [...featuredPinned, ...standardPinned, ...featuredUnpinned, ...standardUnpinned];
-  }, [pinnedSlugs, recentSlugs, recentTools, category]);
+  }, [pinnedSlugs]);
 
   const matches = ordered.filter(tool => {
     const detail = presentation[tool.slug];
@@ -101,8 +92,6 @@ export default function ToolGrid() {
         ? true
         : category === 'Pinned'
         ? pinnedSlugs.includes(tool.slug)
-        : category === 'Recent'
-        ? recentSlugs.includes(tool.slug)
         : (detail?.category ?? tool.category) === category;
 
     return (
@@ -116,11 +105,11 @@ export default function ToolGrid() {
   return (
     <>
       <div className="directory-heading">
-        <div>
+        <div className="directory-heading-top">
           <h1>All tools</h1>
-          <span className="directory-count">{tools.length} utilities</span>
+          <span className="directory-count">{tools.length} tools ready to use</span>
         </div>
-        <p>Simple tools. Real use.</p>
+        <p className="directory-tagline">Simple, fast, and private utilities. Ready to use anytime.</p>
       </div>
       <div className="directory-search">
         <label>
@@ -135,23 +124,6 @@ export default function ToolGrid() {
         </label>
         <CommandTrigger compact/>
       </div>
-      {mounted && recentTools.length > 0 && category === 'All' && !query && (
-        <div className="flex items-center gap-2 text-xs text-dim overflow-x-auto pb-1 mb-2">
-          <span className="flex items-center gap-1 text-[11px] font-semibold tracking-wider uppercase shrink-0">
-            <Clock size={12} className="text-accent" /> Recent:
-          </span>
-          {recentTools.slice(0, 4).map(({ tool }) => (
-            <Link
-              key={tool.slug}
-              href={`/tools/${tool.slug}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-panel px-2.5 py-1 text-xs text-text hover:border-accent hover:text-accent transition-colors shrink-0"
-            >
-              <tool.icon size={12} />
-              <span>{tool.name}</span>
-            </Link>
-          ))}
-        </div>
-      )}
       <div className="category-filters" role="group" aria-label="Filter tools by category">
         {pinnedSlugs.length > 0 && (
           <button
@@ -162,17 +134,6 @@ export default function ToolGrid() {
           >
             <Star size={13} className="fill-amber-500 text-amber-500" />
             <span>Pinned ({pinnedSlugs.length})</span>
-          </button>
-        )}
-        {recentSlugs.length > 0 && (
-          <button
-            type="button"
-            aria-pressed={category === 'Recent'}
-            className={`flex items-center gap-1.5 ${category === 'Recent' ? 'selected' : ''}`}
-            onClick={() => setCategory('Recent')}
-          >
-            <Clock size={13} className="text-accent" />
-            <span>Recent ({recentSlugs.length})</span>
           </button>
         )}
         {baseCategories.map(item => (
@@ -199,8 +160,6 @@ export default function ToolGrid() {
           <p>
             {category === 'Pinned'
               ? 'You have not pinned any tools yet. Click the star on any card to pin it!'
-              : category === 'Recent'
-              ? 'You have not used any tools yet. Open any tool and it will appear here!'
               : 'Try another search or choose a different category.'}
           </p>
           <button

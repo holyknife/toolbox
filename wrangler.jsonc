@@ -11,10 +11,7 @@
 	"vars": {
 		"NEXT_PRIVATE_MINIMAL_MODE": "1",
 		"UPSTASH_REDIS_REST_URL": "https://heroic-bull-282870.upstash.io",
-		"UPSTASH_REDIS_REST_TOKEN": "gQAAAAAABFD2AAIgcDI5MThiYzFmODQ2N2U0Yjc0OTI2YTgxZTBkOTNhZmNkNg",
-		"NEXT_PUBLIC_SUPABASE_URL": "https://fpcpdjmmpdcqbcyummnu.supabase.co",
-		"NEXT_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_p1O5_uxLTmnQxyFtWZc1Yw_jf7mTp5Z",
-		"NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_p1O5_uxLTmnQxyFtWZc1Yw_jf7mTp5Z"
+		"UPSTASH_REDIS_REST_TOKEN": "gQAAAAAABFD2AAIgcDI5MThiYzFmODQ2N2U0Yjc0OTI2YTgxZTBkOTNhZmNkNg"
 	},
 
 	"assets": {

@@ -8,8 +8,6 @@ import { tools } from '@/lib/tools-registry';
 import CommandPalette, { CommandTrigger } from './command-palette';
 import FavoriteButton from './favorite-button';
 import VisitorCounter from './visitor-counter';
-import AuthModal from './auth-modal';
-import UserMenu from './user-menu';
 import { recordToolUsage } from '@/lib/favorites';
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -33,7 +31,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     }
   }, [current]);
 
-  return <div className="app-shell"><CommandPalette/><AuthModal/>
+  return <div className="app-shell"><CommandPalette/>
     <a className="skip-link" href="#main">Skip to content</a>
     <aside className="sidebar">
       <Link href="/" className="brand"><span className="brand-icon"><Box size={22}/></span>toolbox<span className="brand-dot">.</span></Link>
@@ -41,7 +39,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {tools.map(t => <Link href={`/tools/${t.slug}`} key={t.slug} className={`nav-link ${current?.slug === t.slug ? 'active' : ''}`} aria-current={current?.slug === t.slug ? 'page' : undefined}><t.icon size={18}/>{t.name}</Link>)}</nav>
       <div className="sidebar-bottom"><p>Toolbox v1.0<br/>Made in Nepal <span aria-label="Nepal">🇳🇵</span></p></div>
     </aside>
-    <div className="main-shell"><header className="header"><div className="breadcrumb flex items-center gap-1.5"><span>Workspace</span><span className="slash">/</span><span>{current?.name ?? (path === '/' ? 'All tools' : 'Page not found')}</span>{current && <FavoriteButton slug={current.slug} size={15} className="ml-1" />}</div><div className="header-right">{path !== '/' && <CommandTrigger/>}<UserMenu/><button type="button" role="switch" aria-checked={dark} onClick={toggleTheme} className="theme-switch" title={dark ? 'Switch to light theme' : 'Switch to dark theme'} aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}><span className={`theme-switch-pill ${dark ? 'is-dark' : 'is-light'}`} aria-hidden="true"/><span className={`theme-switch-btn ${!dark ? 'selected' : ''}`} aria-hidden="true"><Sun size={15}/></span><span className={`theme-switch-btn ${dark ? 'selected' : ''}`} aria-hidden="true"><Moon size={15}/></span></button></div></header>
+    <div className="main-shell"><header className="header"><div className="breadcrumb flex items-center gap-1.5"><span>Workspace</span><span className="slash">/</span><span>{current?.name ?? (path === '/' ? 'All tools' : 'Page not found')}</span>{current && <FavoriteButton slug={current.slug} size={15} className="ml-1" />}</div><div className="header-right">{path !== '/' && <CommandTrigger/>}<button type="button" role="switch" aria-checked={dark} onClick={toggleTheme} className="theme-switch" title={dark ? 'Switch to light theme' : 'Switch to dark theme'} aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}><span className={`theme-switch-pill ${dark ? 'is-dark' : 'is-light'}`} aria-hidden="true"/><span className={`theme-switch-btn ${!dark ? 'selected' : ''}`} aria-hidden="true"><Sun size={15}/></span><span className={`theme-switch-btn ${dark ? 'selected' : ''}`} aria-hidden="true"><Moon size={15}/></span></button></div></header>
     <main id="main">
       {/* A route key restarts the entrance animation without remounting the shell. */}
       <div key={path} className="page-transition">{children}</div>
