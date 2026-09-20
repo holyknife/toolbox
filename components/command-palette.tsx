@@ -1,8 +1,9 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowUpRight, Search, X } from 'lucide-react';
 import { searchCommands } from '@/lib/command-search';
+import { useRecentTools } from '@/lib/favorites';
 
 const openEvent = 'toolbox:open-command-palette';
 
@@ -25,7 +26,16 @@ export default function CommandPalette() {
   const [open,setOpen] = useState(false);
   const [query,setQuery] = useState('');
   const [selected,setSelected] = useState(0);
-  const matches = searchCommands(query);
+  const { recentTools } = useRecentTools(5);
+  const baseMatches = searchCommands(query);
+  const matches = useMemo(() => {
+    if (query.trim()) return baseMatches;
+    const recentPaths = recentTools.map(r => `/tools/${r.tool.slug}`);
+    const recentCmds = baseMatches.filter(c => recentPaths.includes(c.href));
+    const allToolsCmd = baseMatches.filter(c => c.href === '/');
+    const remaining = baseMatches.filter(c => c.href !== '/' && !recentPaths.includes(c.href));
+    return [...allToolsCmd, ...recentCmds, ...remaining];
+  }, [query, baseMatches, recentTools]);
   const active = matches[selected];
 
   useEffect(() => {
