@@ -42,10 +42,10 @@ export default function UserMenu() {
       <button
         type="button"
         onClick={openAuthModal}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-panel px-2.5 py-1.5 text-xs font-medium text-text hover:border-accent hover:text-accent transition-colors"
+        className="inline-flex items-center gap-1.5 rounded-lg bg-[#385ee8] text-white hover:bg-[#2d4ec7] px-3 py-1.5 text-xs font-semibold shadow-sm transition-all hover:shadow hover:brightness-105 active:scale-95"
         title="Sign in to sync your tools"
       >
-        <LogIn size={14} />
+        <LogIn size={14} className="stroke-[2.2]" />
         <span>Sign in</span>
       </button>
     );

@@ -26,9 +26,12 @@ export interface ToolUsageRow {
 const SESSION_KEY = 'toolbox_supabase_session';
 export const AUTH_CHANGE_EVENT = 'toolbox_auth_state_change';
 
+const DEFAULT_SUPABASE_URL = 'https://fpcpdjmmpdcqbcyummnu.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'sb_publishable_p1O5_uxLTmnQxyFtWZc1Yw_jf7mTp5Z';
+
 export function getSupabaseConfig() {
-  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/\/$/, '');
-  const anonKey = (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL).trim().replace(/\/$/, '');
+  const anonKey = (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_KEY).trim();
   return {
     url,
     anonKey,
@@ -134,6 +137,90 @@ export const supabaseAuth = {
       return { session, error: null };
     } catch (err: any) {
       return { session: null, error: err.message || 'Network error while verifying code.' };
+    }
+  },
+
+  /** Sign in with email and password */
+  async signInWithPassword(email: string, password: string): Promise<{ session: SupabaseSession | null; error: string | null }> {
+    const { url, anonKey } = getSupabaseConfig();
+    try {
+      const res = await fetch(`${url}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return { session: null, error: data.error_description || data.msg || data.message || 'Invalid email or password.' };
+      }
+
+      const expires_at = Math.floor(Date.now() / 1000) + (data.expires_in || 3600);
+      const session: SupabaseSession = {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        expires_at,
+        user: data.user,
+      };
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+        window.dispatchEvent(new CustomEvent(AUTH_CHANGE_EVENT, { detail: session }));
+      }
+
+      return { session, error: null };
+    } catch (err: any) {
+      return { session: null, error: err.message || 'Network error while signing in.' };
+    }
+  },
+
+  /** Sign up with email and password */
+  async signUpWithPassword(email: string, password: string): Promise<{ session: SupabaseSession | null; message?: string; error: string | null }> {
+    const { url, anonKey } = getSupabaseConfig();
+    try {
+      const res = await fetch(`${url}/auth/v1/signup`, {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return { session: null, error: data.error_description || data.msg || data.message || 'Failed to create account.' };
+      }
+
+      if (data.access_token) {
+        const expires_at = Math.floor(Date.now() / 1000) + (data.expires_in || 3600);
+        const session: SupabaseSession = {
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+          expires_at,
+          user: data.user,
+        };
+
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+          window.dispatchEvent(new CustomEvent(AUTH_CHANGE_EVENT, { detail: session }));
+        }
+
+        return { session, error: null };
+      }
+
+      return { session: null, message: 'Account created! If email confirmation is required, please check your inbox.', error: null };
+    } catch (err: any) {
+      return { session: null, error: err.message || 'Network error while creating account.' };
     }
   },
 

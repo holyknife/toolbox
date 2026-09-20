@@ -68,6 +68,14 @@ export function useAuth() {
     return await supabaseAuth.verifyOtp(email, token);
   }, []);
 
+  const signInWithPassword = useCallback(async (email: string, password: string) => {
+    return await supabaseAuth.signInWithPassword(email, password);
+  }, []);
+
+  const signUpWithPassword = useCallback(async (email: string, password: string) => {
+    return await supabaseAuth.signUpWithPassword(email, password);
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabaseAuth.signOut();
   }, []);
@@ -79,6 +87,8 @@ export function useAuth() {
     isAuthenticated: Boolean(user),
     signInWithOtp,
     verifyOtp,
+    signInWithPassword,
+    signUpWithPassword,
     signOut,
   };
 }
