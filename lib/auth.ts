@@ -72,8 +72,12 @@ export function useAuth() {
     return await supabaseAuth.signInWithPassword(email, password);
   }, []);
 
-  const signUpWithPassword = useCallback(async (email: string, password: string) => {
-    return await supabaseAuth.signUpWithPassword(email, password);
+  const signUpWithPassword = useCallback(async (email: string, password: string, name?: string) => {
+    return await supabaseAuth.signUpWithPassword(email, password, name);
+  }, []);
+
+  const verifySignupOtp = useCallback(async (email: string, token: string) => {
+    return await supabaseAuth.verifySignupOtp(email, token);
   }, []);
 
   const signOut = useCallback(async () => {
@@ -89,6 +93,7 @@ export function useAuth() {
     verifyOtp,
     signInWithPassword,
     signUpWithPassword,
+    verifySignupOtp,
     signOut,
   };
 }

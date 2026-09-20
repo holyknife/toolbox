@@ -158,6 +158,13 @@ export const supabaseAuth = {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        const rawErr = (data.error_description || data.msg || data.message || '').toLowerCase();
+        if (rawErr.includes('invalid login credentials') || rawErr.includes('invalid credentials')) {
+          return { session: null, error: 'Incorrect email or password. If you do not have an account yet, click "Sign up" above.' };
+        }
+        if (rawErr.includes('email not confirmed')) {
+          return { session: null, error: 'Your email has not been verified yet. Please enter the OTP code sent to your email.' };
+        }
         return { session: null, error: data.error_description || data.msg || data.message || 'Invalid email or password.' };
       }
 
@@ -180,8 +187,8 @@ export const supabaseAuth = {
     }
   },
 
-  /** Sign up with email and password */
-  async signUpWithPassword(email: string, password: string): Promise<{ session: SupabaseSession | null; message?: string; error: string | null }> {
+  /** Sign up with name, email, and password. Supabase sends confirmation OTP code. */
+  async signUpWithPassword(email: string, password: string, name?: string): Promise<{ session: SupabaseSession | null; needsOtp: boolean; error: string | null }> {
     const { url, anonKey } = getSupabaseConfig();
     try {
       const res = await fetch(`${url}/auth/v1/signup`, {
@@ -193,12 +200,22 @@ export const supabaseAuth = {
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           password,
+          data: name ? { name: name.trim(), full_name: name.trim() } : undefined,
         }),
       });
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        return { session: null, error: data.error_description || data.msg || data.message || 'Failed to create account.' };
+        const msg = data.error_description || data.msg || data.message || '';
+        if (msg.toLowerCase().includes('already registered')) {
+          return { session: null, needsOtp: false, error: 'An account with this email already exists. Please log in instead.' };
+        }
+        return { session: null, needsOtp: false, error: msg || 'Failed to create account.' };
+      }
+
+      // Check if user already existed (Supabase empty identities array when email confirmation is active)
+      if (data.identities && Array.isArray(data.identities) && data.identities.length === 0) {
+        return { session: null, needsOtp: false, error: 'An account with this email already exists. Please log in instead.' };
       }
 
       if (data.access_token) {
@@ -215,12 +232,73 @@ export const supabaseAuth = {
           window.dispatchEvent(new CustomEvent(AUTH_CHANGE_EVENT, { detail: session }));
         }
 
-        return { session, error: null };
+        return { session, needsOtp: false, error: null };
       }
 
-      return { session: null, message: 'Account created! If email confirmation is required, please check your inbox.', error: null };
+      // Email confirmation OTP required
+      return { session: null, needsOtp: true, error: null };
     } catch (err: any) {
-      return { session: null, error: err.message || 'Network error while creating account.' };
+      return { session: null, needsOtp: false, error: err.message || 'Network error while creating account.' };
+    }
+  },
+
+  /** Verify OTP code for email signup confirmation */
+  async verifySignupOtp(email: string, token: string): Promise<{ session: SupabaseSession | null; error: string | null }> {
+    const { url, anonKey } = getSupabaseConfig();
+    try {
+      // First try signup verification
+      let res = await fetch(`${url}/auth/v1/verify`, {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'signup',
+          email: email.trim().toLowerCase(),
+          token: token.trim(),
+        }),
+      });
+
+      let data = await res.json().catch(() => ({}));
+
+      // If type signup failed, try type email (magiclink/otp fallback)
+      if (!res.ok) {
+        res = await fetch(`${url}/auth/v1/verify`, {
+          method: 'POST',
+          headers: {
+            apikey: anonKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: 'email',
+            email: email.trim().toLowerCase(),
+            token: token.trim(),
+          }),
+        });
+        data = await res.json().catch(() => ({}));
+      }
+
+      if (!res.ok) {
+        return { session: null, error: data.msg || data.error_description || data.message || 'Invalid or expired 6-digit code.' };
+      }
+
+      const expires_at = Math.floor(Date.now() / 1000) + (data.expires_in || 3600);
+      const session: SupabaseSession = {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        expires_at,
+        user: data.user,
+      };
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+        window.dispatchEvent(new CustomEvent(AUTH_CHANGE_EVENT, { detail: session }));
+      }
+
+      return { session, error: null };
+    } catch (err: any) {
+      return { session: null, error: err.message || 'Network error while verifying code.' };
     }
   },
 
